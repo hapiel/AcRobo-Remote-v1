@@ -15,10 +15,10 @@ uint8_t robotAddress[] = {0x94, 0xE6, 0x86, 0x00, 0xE0, 0xD0};
 #define LED_G 14
 #define LED_B 27
 
-#define SLIDER_L_ARM 32
-#define SLIDER_L_LEG 34
-#define SLIDER_R_ARM 36
-#define SLIDER_R_LEG 39
+#define JOYSTICK_L_Y 32
+#define JOYSTICK_L_X 34
+#define JOYSTICK_R_X 36
+#define JOYSTICK_R_Y 39
 
 #define ENCODER_A 26
 #define ENCODER_B 25
@@ -150,26 +150,28 @@ void updateEncoder(){
   encoderSwDown = newSw;
 }
 
-float batteryVoltage;
+// float batteryVoltage;
 int8_t batteryPercent;
 RunningMedian batterySamples = RunningMedian(64); 
 
 uint32_t batteryAlarmTimer = 0;
 
 void updateBattery(){
-  float vMax = 4.2;
-  float vMin = 3.65;
+  // float vMax = 4.2;
+  // float vMin = 3.65;
 
   batterySamples.add(analogRead(BATTERY_V));
 
-  batteryVoltage = (batterySamples.getMedian() / 4096.0) * 3.3 * 2;
-  batteryPercent = (batteryVoltage - vMin) / ((vMax - vMin) / 100.0);
+  // batteryVoltage = (batterySamples.getMedian() / 4096.0) * 3.3 * 2;
+  // batteryPercent = (batteryVoltage - vMin) / ((vMax - vMin) / 100.0);
+
+  batteryPercent = map(batterySamples.getAverage(), 2060, 2370, 0, 100); // 2060 =~ 3.65v, 2370 =~ 4.2v
 
   // low battery alarm
-  // if (batteryPercent < 10 && batteryAlarmTimer < millis()){
-  //   setBuzzer(300);
-  //   batteryAlarmTimer = millis() + 600;
-  // }
+  if (batteryPercent < 10 && batteryAlarmTimer < millis()){
+    setBuzzer(300);
+    batteryAlarmTimer = millis() + 600;
+  }
 
 }
 
@@ -177,13 +179,13 @@ void setLCD(){
   lcd.clear();
 
   lcd.setCursor(0,0);   
-  lcd.print("SLA: ");
+  lcd.print("JLX: ");
   lcd.setCursor(0,1);   
-  lcd.print("SLL: ");
+  lcd.print("JLY: ");
   lcd.setCursor(0,2);   
-  lcd.print("SRA: ");
+  lcd.print("JRX: ");
   lcd.setCursor(0,3);   
-  lcd.print("SRL: ");
+  lcd.print("JRY: ");
 }
 
 uint32_t lcdTimer = 0;
@@ -194,34 +196,45 @@ void updateLCD(){
   if (lcdTimer < millis()){
 
     
-    char slideLA[5]; // amount of characters in string + 1
-    char slideLL[5];
-    char slideRA[5];
-    char slideRL[5];
-    sprintf(slideLA, "%04d",analogRead(SLIDER_L_ARM)); // 4 digit string with leading zeros
-    sprintf(slideLL, "%04d",analogRead(SLIDER_L_LEG));
-    sprintf(slideRA, "%04d",analogRead(SLIDER_R_ARM));
-    sprintf(slideRL, "%04d",analogRead(SLIDER_R_LEG));
+    char joyLX[5]; // amount of characters in string + 1
+    char joyLY[5]; 
+    char joyRX[5];
+    char joyRY[5];
+    sprintf(joyLX, "%04d",analogRead(JOYSTICK_L_X));
+    sprintf(joyLY, "%04d",analogRead(JOYSTICK_L_Y)); // 4 digit string with leading zeros
+    sprintf(joyRX, "%04d",analogRead(JOYSTICK_R_X));
+    sprintf(joyRY, "%04d",analogRead(JOYSTICK_R_Y));
+
+    
 
 
     lcd.setCursor(4,0);   
-    lcd.print(slideLA);
+    lcd.print(joyLX);
     lcd.setCursor(4,1);   
-    lcd.print(slideLL);
+    lcd.print(joyLY);
     lcd.setCursor(4,2);   
-    lcd.print(slideRA);
+    lcd.print(joyRX);
     lcd.setCursor(4,3);   
-    lcd.print(slideRL);
+    lcd.print(joyRY);
+
+    char slideLLeg[6]; // amount of characters in string + 1
+    char slideLArm[6]; 
+    char slideRLeg[6];
+    char slideRArm[6];
+    sprintf(slideLLeg, "%05d",ads1115.readADC_SingleEnded(2));
+    sprintf(slideLArm, "%05d",ads1115.readADC_SingleEnded(3)); // 4 digit string with leading zeros
+    sprintf(slideRLeg, "%05d",ads1115.readADC_SingleEnded(1));
+    sprintf(slideRArm, "%05d",ads1115.readADC_SingleEnded(0));
 
     // print ads
     lcd.setCursor(9,0);   
-    lcd.print(ads1115.readADC_SingleEnded(0));
+    lcd.print(slideLLeg);
     lcd.setCursor(9,1);   
-    lcd.print(ads1115.readADC_SingleEnded(1));
+    lcd.print(slideLArm);
     lcd.setCursor(9,2);   
-    lcd.print(ads1115.readADC_SingleEnded(2));
+    lcd.print(slideRLeg);
     lcd.setCursor(9,3);   
-    lcd.print(ads1115.readADC_SingleEnded(3));
+    lcd.print(slideRArm);
 
     char key = keypad.getKey();
     if (key != NO_KEY){
@@ -234,6 +247,11 @@ void updateLCD(){
     sprintf(batPerc, "%02d", batteryPercent);
     lcd.print(batPerc);
 
+    // lcd.setCursor(16,0);
+    // char batPerc[5];
+    // sprintf(batPerc, "%04d", analogRead(35));
+    // lcd.print(batPerc);
+    
     lcd.setCursor(15,1);
     lcd.print(hi);
     lcd.setCursor(15,2);
@@ -285,24 +303,24 @@ void printAll(){
   if (printTimer < millis()){
     // Serial.print(analogRead(SLIDER_L_ARM));
     // Serial.print(",");
-    // Serial.print(analogRead(SLIDER_L_LEG));
+    // Serial.print(analogRead(JOYSTICK_L_X));
     // Serial.print(",");
-    // Serial.print(analogRead(SLIDER_R_ARM));
+    // Serial.print(analogRead(JOYSTICK_R_X));
     // Serial.print(",");
-    // Serial.print(analogRead(SLIDER_R_LEG));
+    // Serial.print(analogRead(JOYSTICK_R_Y));
     // Serial.print(",");
     // Serial.print(encoderPos);
     // Serial.print(",");
 
     // Serial.println(analogRead(BATTERY_V));
 
-    // Serial.print(ads1115.readADC_SingleEnded(0));
-    // Serial.print(",");
-    // Serial.print(ads1115.readADC_SingleEnded(1));
-    // Serial.print(",");
-    // Serial.print(ads1115.readADC_SingleEnded(2));
-    // Serial.print(",");
-    // Serial.println(ads1115.readADC_SingleEnded(3));
+    Serial.print(ads1115.readADC_SingleEnded(0));
+    Serial.print(",");
+    Serial.print(ads1115.readADC_SingleEnded(1));
+    Serial.print(",");
+    Serial.print(ads1115.readADC_SingleEnded(2));
+    Serial.print(",");
+    Serial.println(ads1115.readADC_SingleEnded(3));
 
     printTimer = millis() + 10; // print every 10 ms
   }
@@ -384,8 +402,8 @@ void loop() {
     ledBlue();
   }
 
-  dataOut.pot1 = analogRead(SLIDER_L_ARM);
-  dataOut.pot2 = analogRead(SLIDER_L_LEG);
+  dataOut.pot1 = analogRead(JOYSTICK_L_Y);
+  dataOut.pot2 = analogRead(JOYSTICK_L_X);
 
   esp_now_send(robotAddress, (uint8_t *) &dataOut, sizeof(dataOut));
 
