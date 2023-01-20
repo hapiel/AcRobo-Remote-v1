@@ -31,8 +31,8 @@
 
 #define BATTERY_V 35
 #define LOW_POWER_SW 18
-
-// PROTOTYPES in order of document ---------------
+// ---------------
+// MARK: - PROTOTYPES in order of document 
 
 // ADC
 Adafruit_ADS1115 ads1115; // adc converter
@@ -129,7 +129,7 @@ void printAll();
 // END FORWARD DECLARATIONS
 // **********************************
 
-// Setup
+// MARK: -Setup
 
 void setup() {
 
@@ -187,7 +187,8 @@ void setup() {
 }
 
 //**********************************
-//Loop
+// MARK: -Loop
+
 
 void loop() {
   updateBattery();
@@ -218,8 +219,9 @@ void loop() {
 }
 
 //**********************************
-// Functions
-// Battery ----------------------------
+// MARK: -Functions
+// ----------------------------
+// MARK: -Battery 
 
 void setModemSleep() {
   WiFi.setSleep(true);
@@ -258,7 +260,9 @@ void updateBattery(){
   }
 }
 
-// Buzzer ----------------------------
+// ----------------------------
+// MARK: -Buzzer 
+
 
 void setBuzzer(uint16_t time){
   buzzerTimer = millis() + time;
@@ -271,7 +275,9 @@ void updateBuzzer(){
   }
 }
 
-// Data espnow ----------------------
+// ----------------------
+// MARK: -Data espnow 
+
 
 
 void sendData(){
@@ -302,7 +308,8 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
   strcpy(hi, dataIn.hi);
 }
 
-// Encoder -----------------------
+// -----------------------
+// MARK: - Encoder
 
 void updateEncoder(){
   int16_t newPos = encoder.getCount();
@@ -331,7 +338,8 @@ void updateEncoder(){
   encoderSwDown = newSw;
 }
 
-// Lcd -------------------------------
+//  -------------------------------
+// MARK: - Lcd
 
 void setLCD(){
   lcd.clear();
@@ -420,7 +428,8 @@ void updateLCD(){
 
 }
 
-// Led --------------------------------
+// --------------------------------
+// MARK: - Led 
 
 void ledRed(uint8_t brightness = 10){
   analogWrite(LED_R, brightness);
@@ -470,7 +479,8 @@ void updateLED(){
   }
 }
 
-// Print --------------
+// --------------
+// MARK: - Print
 
 void printAll(){
   if (printTimer < millis()){
