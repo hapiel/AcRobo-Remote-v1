@@ -492,7 +492,7 @@ void updateLCD(){
   if (lcdTimer > millis()){
     return;
   }
-  lcdTimer = millis() + 20; // update every 20 milliseconds
+  lcdTimer = millis() + 200; // update every 200 milliseconds
 
   char joyLX[5]; // amount of characters in string + 1
   char joyLY[5]; 
@@ -531,17 +531,15 @@ void updateLCD(){
   lcd.setCursor(9,3);   
   lcd.print(slideRArm);
 
-  // char key = keypad.getKey();
-  // if (key != NO_KEY){
-  //   lcd.setCursor(15,0);
-  //   lcd.print(key);
-  // } 
+  if (dataOut.key != NO_KEY){
+    lcd.setCursor(15,0);
+    lcd.print(dataOut.key);
+  } 
   
   lcd.setCursor(18,0);
   char batPerc[3];
   sprintf(batPerc, "%02d", batteryPercent);
   lcd.print(batPerc);
-
 
 }
 
