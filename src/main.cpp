@@ -28,8 +28,8 @@ uint8_t robotAddress[] = {0x94, 0xE6, 0x86, 0x00, 0xE0, 0xD0};
 
 #define I2CMATRIX 0x38
 
-
 #define BATTERY_V 35
+#define LOW_POWER_SW 18
 
 typedef struct struct_data_in {
   char hi[6];
@@ -54,19 +54,14 @@ esp_now_peer_info_t peerInfo;
 
 Adafruit_ADS1115 ads1115; // adc converter
 
-// is this really needed?
-String success;
 
+
+bool lastPackageSuccess = false;
 // Callback when data is sent
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   Serial.print("\r\nLast Packet Send Status:\t");
   Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
-  if (status ==0){
-    success = "Delivery Success :)";
-  }
-  else{
-    success = "Delivery Fail :(";
-  }
+  lastPackageSuccess = status == ESP_NOW_SEND_SUCCESS;
 
   //Note that too short interval between sending two ESP-NOW data may lead to disorder of sending callback function. So, it is recommended that sending the next ESP-NOW data after the sending callback function of the previous sending has returned.
   // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/network/esp_now.html
@@ -115,6 +110,18 @@ void updateBuzzer(){
   }
 }
 
+void setModemSleep() {
+  WiFi.setSleep(true);
+  setCpuFrequencyMhz(80);
+  Serial.println("sleep mode enabled");
+}
+
+void wakeModemSleep() {
+  WiFi.setSleep(false);
+  setCpuFrequencyMhz(240);
+  Serial.println("sleep mode disabled");
+}
+
 // encoder vars
 ESP32Encoder encoder;
 int16_t encoderPos = 0;
@@ -156,24 +163,7 @@ RunningMedian batterySamples = RunningMedian(64);
 
 uint32_t batteryAlarmTimer = 0;
 
-void updateBattery(){
-  // float vMax = 4.2;
-  // float vMin = 3.65;
-
-  batterySamples.add(analogRead(BATTERY_V));
-
-  // batteryVoltage = (batterySamples.getMedian() / 4096.0) * 3.3 * 2;
-  // batteryPercent = (batteryVoltage - vMin) / ((vMax - vMin) / 100.0);
-
-  batteryPercent = map(batterySamples.getAverage(), 2060, 2370, 0, 100); // 2060 =~ 3.65v, 2370 =~ 4.2v
-
-  // low battery alarm
-  if (batteryPercent < 10 && batteryAlarmTimer < millis()){
-    setBuzzer(300);
-    batteryAlarmTimer = millis() + 600;
-  }
-
-}
+bool chargingState = false;
 
 void setLCD(){
   lcd.clear();
@@ -187,6 +177,40 @@ void setLCD(){
   lcd.setCursor(0,3);   
   lcd.print("JRY: ");
 }
+
+void updateBattery(){
+  // float vMax = 4.2;
+  // float vMin = 3.65;
+
+  batterySamples.add(analogRead(BATTERY_V));
+
+  // batteryVoltage = (batterySamples.getMedian() / 4096.0) * 3.3 * 2;
+  // batteryPercent = (batteryVoltage - vMin) / ((vMax - vMin) / 100.0);
+
+  batteryPercent = map(batterySamples.getAverage(), 2060, 2370, 0, 100); // 2060 =~ 3.65v, 2370 =~ 4.2v
+
+  // go to modem sleep
+  if (digitalRead(LOW_POWER_SW) && !chargingState){
+    chargingState = true;
+    setModemSleep();
+  }
+  if (!digitalRead(LOW_POWER_SW) && chargingState){
+    chargingState = false;
+    wakeModemSleep();
+    lcd.init();
+    lcd.clear(); 
+    setLCD();
+  }
+
+  // low battery alarm
+  if (batteryPercent < 10 && batteryAlarmTimer < millis() && !chargingState){
+    setBuzzer(300);
+    batteryAlarmTimer = millis() + 600;
+  }
+
+
+}
+
 
 uint32_t lcdTimer = 0;
 
@@ -285,6 +309,12 @@ void ledBlue(uint8_t brightness = 10){
   analogWrite(LED_G, 0);
 }
 
+void ledYellow(uint8_t brightness = 10){
+  analogWrite(LED_R, brightness);
+  analogWrite(LED_G, brightness * 0.4);
+  analogWrite(LED_B, 0);
+}
+
 void ledWhite(uint8_t brightness = 10){
   analogWrite(LED_R, brightness);
   analogWrite(LED_G, brightness);
@@ -336,6 +366,8 @@ void setup() {
   pinMode(BUZZER, OUTPUT);
   pinMode(ENCODER_SW, INPUT_PULLUP);
 
+  pinMode(LOW_POWER_SW, INPUT_PULLDOWN);
+
   Serial.begin(115200);
   Serial.println("remote is connected to serial");
 
@@ -380,11 +412,24 @@ void setup() {
 
 }
 
+void updateLED(){
+  if (chargingState){
+    ledYellow(5);
+    return;
+  }
+  if (lastPackageSuccess){
+    ledBlue();
+  } else {
+    ledRed();
+  }
+}
+
 void loop() {
   updateBattery();
   updateEncoder(); // update encoder pos, and set encoder up/down bools for one loop
   updateBuzzer(); // play buzzer if buzzertimer is high
   updateLCD();
+  updateLED();
 
   if (encoderUp){
     setBuzzer();
@@ -396,11 +441,6 @@ void loop() {
     setBuzzer(200);
   }
 
-  if (encoderSwDown){
-    ledWhite();
-  } else {
-    ledBlue();
-  }
 
   dataOut.pot1 = analogRead(JOYSTICK_L_Y);
   dataOut.pot2 = analogRead(JOYSTICK_L_X);
