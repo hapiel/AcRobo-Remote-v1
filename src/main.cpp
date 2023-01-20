@@ -9,7 +9,8 @@
 #include <WiFi.h>
 #include <esp_now.h>
 
-uint8_t robotAddress[] = {0x94, 0xE6, 0x86, 0x00, 0xE0, 0xD0};
+// mac address of robot
+
 
 #define LED_R 12
 #define LED_G 14
@@ -31,6 +32,30 @@ uint8_t robotAddress[] = {0x94, 0xE6, 0x86, 0x00, 0xE0, 0xD0};
 #define BATTERY_V 35
 #define LOW_POWER_SW 18
 
+// PROTOTYPES in order of document ---------------
+
+// ADC
+Adafruit_ADS1115 ads1115; // adc converter
+
+// BATTERY
+int8_t batteryPercent;
+RunningMedian batterySamples = RunningMedian(64); 
+uint32_t batteryAlarmTimer = 0;
+bool chargingState = false;
+
+void setModemSleep();
+void wakeModemSleep();
+void updateBattery();
+
+// BUZZER
+uint32_t buzzerTimer = 0;
+
+void setBuzzer(uint16_t time=100);
+void updateBuzzer();
+
+// DATA ESPNOW
+uint32_t dataTimer = 0;
+uint8_t robotAddress[] = {0x94, 0xE6, 0x86, 0x00, 0xE0, 0xD0};
 typedef struct struct_data_in {
   char hi[6];
   uint16_t pot1;
@@ -51,34 +76,23 @@ struct_data_in dataIn;
 struct_data_out dataOut;
 
 esp_now_peer_info_t peerInfo;
-
-Adafruit_ADS1115 ads1115; // adc converter
-
-
-
 bool lastPackageSuccess = false;
-// Callback when data is sent
-void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
-  Serial.print("\r\nLast Packet Send Status:\t");
-  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
-  lastPackageSuccess = status == ESP_NOW_SEND_SUCCESS;
 
-  //Note that too short interval between sending two ESP-NOW data may lead to disorder of sending callback function. So, it is recommended that sending the next ESP-NOW data after the sending callback function of the previous sending has returned.
-  // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/network/esp_now.html
-}
+void sendData();
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status);
+void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len);
 
+// ENCODER
+ESP32Encoder encoder;
+int16_t encoderPos = 0;
+bool encoderUp = false;
+bool encoderDown = false;
+bool encoderSwDown = false;
+bool encoderSwPressed = false;
 
-void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
-  memcpy(&dataIn, incomingData, sizeof(dataIn));
-  Serial.print("Bytes received: ");
-  Serial.println(len);
-  pot1 = dataIn.pot1;
-  pot2 = dataIn.pot2;
-  strcpy(hi, dataIn.hi);
-}
+void updateEncoder();
 
-// keypad matrix
-
+// KEYPAD MATRIX
 const byte ROWS = 4; 
 const byte COLS = 4; 
 char hexaKeys[ROWS][COLS] = {
@@ -89,26 +103,123 @@ char hexaKeys[ROWS][COLS] = {
 };
 byte rowPins[ROWS] = {0, 1, 2, 3}; //connect to the row pinouts of the keypad
 byte colPins[COLS] = {4, 5, 6, 7}; //connect to the column pinouts of the keypad
-
 Keypad_I2C keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS, I2CMATRIX); 
 
-// Adafruit_ADS1115 ads1115;	
-
+// LCD
 LiquidCrystal_I2C lcd(0x27,20,4);
+uint32_t lcdTimer = 0;
 
-// buzzer vars
-uint32_t buzzerTimer = 0;
+void setLCD();
+void updateLCD();
 
-void setBuzzer(uint16_t time=100){
-  buzzerTimer = millis() + time;
-}
-void updateBuzzer(){
-  if (buzzerTimer > millis()){
-    digitalWrite(BUZZER, HIGH);
-  } else {
-    digitalWrite(BUZZER, LOW);
+// LED
+void ledRed(uint8_t);
+void ledGreen(uint8_t);
+void ledBlue(uint8_t);
+void ledYellow(uint8_t);
+void ledWhite(uint8_t);
+void updateLED();
+
+// PRINT
+uint32_t printTimer = 0;
+
+void printAll();
+
+
+// END FORWARD DECLARATIONS
+// **********************************
+
+// Setup
+
+void setup() {
+
+  pinMode(LED_R, OUTPUT);
+  pinMode(LED_G, OUTPUT);
+  pinMode(LED_B, OUTPUT);
+
+  pinMode(BUZZER, OUTPUT);
+  pinMode(ENCODER_SW, INPUT_PULLUP);
+
+  pinMode(LOW_POWER_SW, INPUT_PULLDOWN);
+
+  Serial.begin(115200);
+  Serial.println("remote is connected to serial");
+
+  Wire.begin();
+  keypad.begin();
+
+  Serial.println("keypad added");
+
+  lcd.init();
+  lcd.clear();         
+  lcd.backlight(); 
+
+  setLCD();
+
+  // ESP32encoder library setup
+  ESP32Encoder::useInternalWeakPullResistors=UP;
+  encoder.attachSingleEdge(ENCODER_A, ENCODER_B);
+
+  ads1115.begin();
+
+  WiFi.mode(WIFI_MODE_STA);
+
+  WiFi.mode(WIFI_STA);
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("Error initializing ESP-NOW");
+    return;
   }
+
+  // data sent&receive callback
+  esp_now_register_send_cb(OnDataSent);
+  esp_now_register_recv_cb(OnDataRecv);
+
+  // register peer
+  memcpy(peerInfo.peer_addr, robotAddress, 6);
+  peerInfo.channel = 0;  
+  peerInfo.encrypt = false;
+  if (esp_now_add_peer(&peerInfo) != ESP_OK){
+    Serial.println("Failed to add peer");
+    return;
+  }
+
+  Serial.println("setup done");
 }
+
+//**********************************
+//Loop
+
+void loop() {
+  updateBattery();
+  updateEncoder(); // update encoder pos, and set encoder up/down bools for one loop
+  updateBuzzer(); // play buzzer if buzzertimer is high
+  updateLCD();
+  updateLED();
+  sendData();
+
+  if (encoderUp){
+    setBuzzer();
+  }
+  if (encoderDown){
+    setBuzzer(4);
+  }
+  if (encoderSwPressed){
+    setBuzzer(200);
+  }
+
+  dataOut.pot1 = analogRead(JOYSTICK_L_Y);
+  dataOut.pot2 = analogRead(JOYSTICK_L_X);
+
+  
+
+  // delay(1); // because haven't tested ESP_NOW speed yet..
+  // printAll();
+
+}
+
+//**********************************
+// Functions
+// Battery ----------------------------
 
 void setModemSleep() {
   WiFi.setSleep(true);
@@ -122,13 +233,76 @@ void wakeModemSleep() {
   Serial.println("sleep mode disabled");
 }
 
-// encoder vars
-ESP32Encoder encoder;
-int16_t encoderPos = 0;
-bool encoderUp = false;
-bool encoderDown = false;
-bool encoderSwDown = false;
-bool encoderSwPressed = false;
+void updateBattery(){
+  batterySamples.add(analogRead(BATTERY_V));
+
+  batteryPercent = map(batterySamples.getAverage(), 2060, 2370, 0, 100); // 2060 =~ 3.65v, 2370 =~ 4.2v
+
+  // go to modem sleep
+  if (digitalRead(LOW_POWER_SW) && !chargingState){
+    chargingState = true;
+    setModemSleep();
+  }
+  if (!digitalRead(LOW_POWER_SW) && chargingState){
+    chargingState = false;
+    wakeModemSleep();
+    lcd.init();
+    lcd.clear(); 
+    setLCD();
+  }
+
+  // low battery alarm
+  if (batteryPercent < 10 && batteryAlarmTimer < millis() && !chargingState){
+    setBuzzer(300);
+    batteryAlarmTimer = millis() + 600;
+  }
+}
+
+// Buzzer ----------------------------
+
+void setBuzzer(uint16_t time){
+  buzzerTimer = millis() + time;
+}
+void updateBuzzer(){
+  if (buzzerTimer > millis()){
+    digitalWrite(BUZZER, HIGH);
+  } else {
+    digitalWrite(BUZZER, LOW);
+  }
+}
+
+// Data espnow ----------------------
+
+
+void sendData(){
+  
+  if (dataTimer < millis()){
+    esp_now_send(robotAddress, (uint8_t *) &dataOut, sizeof(dataOut));
+  }
+  // send once every 2 ms.
+  dataTimer = millis() + 2;
+};
+
+// Callback when data is sent
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+  // Serial.print("\r\nLast Packet Send Status:\t");
+  // Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+  lastPackageSuccess = status == ESP_NOW_SEND_SUCCESS;
+
+  //Note that too short interval between sending two ESP-NOW data may lead to disorder of sending callback function. So, it is recommended that sending the next ESP-NOW data after the sending callback function of the previous sending has returned.
+  // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/network/esp_now.html
+}
+
+void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
+  memcpy(&dataIn, incomingData, sizeof(dataIn));
+  Serial.print("Bytes received: ");
+  Serial.println(len);
+  pot1 = dataIn.pot1;
+  pot2 = dataIn.pot2;
+  strcpy(hi, dataIn.hi);
+}
+
+// Encoder -----------------------
 
 void updateEncoder(){
   int16_t newPos = encoder.getCount();
@@ -157,13 +331,7 @@ void updateEncoder(){
   encoderSwDown = newSw;
 }
 
-// float batteryVoltage;
-int8_t batteryPercent;
-RunningMedian batterySamples = RunningMedian(64); 
-
-uint32_t batteryAlarmTimer = 0;
-
-bool chargingState = false;
+// Lcd -------------------------------
 
 void setLCD(){
   lcd.clear();
@@ -177,42 +345,6 @@ void setLCD(){
   lcd.setCursor(0,3);   
   lcd.print("JRY: ");
 }
-
-void updateBattery(){
-  // float vMax = 4.2;
-  // float vMin = 3.65;
-
-  batterySamples.add(analogRead(BATTERY_V));
-
-  // batteryVoltage = (batterySamples.getMedian() / 4096.0) * 3.3 * 2;
-  // batteryPercent = (batteryVoltage - vMin) / ((vMax - vMin) / 100.0);
-
-  batteryPercent = map(batterySamples.getAverage(), 2060, 2370, 0, 100); // 2060 =~ 3.65v, 2370 =~ 4.2v
-
-  // go to modem sleep
-  if (digitalRead(LOW_POWER_SW) && !chargingState){
-    chargingState = true;
-    setModemSleep();
-  }
-  if (!digitalRead(LOW_POWER_SW) && chargingState){
-    chargingState = false;
-    wakeModemSleep();
-    lcd.init();
-    lcd.clear(); 
-    setLCD();
-  }
-
-  // low battery alarm
-  if (batteryPercent < 10 && batteryAlarmTimer < millis() && !chargingState){
-    setBuzzer(300);
-    batteryAlarmTimer = millis() + 600;
-  }
-
-
-}
-
-
-uint32_t lcdTimer = 0;
 
 //TODO: Create multiple modes, that can be combined (battery + debug, or battery + menu). Switching mode triggers clear.
 void updateLCD(){
@@ -288,8 +420,7 @@ void updateLCD(){
 
 }
 
-
-
+// Led --------------------------------
 
 void ledRed(uint8_t brightness = 10){
   analogWrite(LED_R, brightness);
@@ -327,7 +458,19 @@ void ledOff(){
   analogWrite(LED_B, 0);
 }
 
-uint32_t printTimer = 0;
+void updateLED(){
+  if (chargingState){
+    ledYellow(5);
+    return;
+  }
+  if (lastPackageSuccess){
+    ledBlue();
+  } else {
+    ledRed();
+  }
+}
+
+// Print --------------
 
 void printAll(){
   if (printTimer < millis()){
@@ -354,101 +497,5 @@ void printAll(){
 
     printTimer = millis() + 10; // print every 10 ms
   }
-
 }
 
-void setup() {
-
-  pinMode(LED_R, OUTPUT);
-  pinMode(LED_G, OUTPUT);
-  pinMode(LED_B, OUTPUT);
-
-  pinMode(BUZZER, OUTPUT);
-  pinMode(ENCODER_SW, INPUT_PULLUP);
-
-  pinMode(LOW_POWER_SW, INPUT_PULLDOWN);
-
-  Serial.begin(115200);
-  Serial.println("remote is connected to serial");
-
-  Wire.begin();
-  keypad.begin();
-
-  Serial.println("keypad added");
-
-  lcd.init();
-  lcd.clear();         
-  lcd.backlight(); 
-
-  setLCD();
-
-  // ESP32encoder library setup
-  ESP32Encoder::useInternalWeakPullResistors=UP;
-  encoder.attachSingleEdge(ENCODER_A, ENCODER_B);
-
-  ads1115.begin();
-
-  WiFi.mode(WIFI_MODE_STA);
-
-  Serial.println("setup done");
-  WiFi.mode(WIFI_STA);
-  if (esp_now_init() != ESP_OK) {
-    Serial.println("Error initializing ESP-NOW");
-    return;
-  }
-
-  // data sent&receive callback
-  esp_now_register_send_cb(OnDataSent);
-  esp_now_register_recv_cb(OnDataRecv);
-
-  // register peer
-  memcpy(peerInfo.peer_addr, robotAddress, 6);
-  peerInfo.channel = 0;  
-  peerInfo.encrypt = false;
-  if (esp_now_add_peer(&peerInfo) != ESP_OK){
-    Serial.println("Failed to add peer");
-    return;
-  }
-
-}
-
-void updateLED(){
-  if (chargingState){
-    ledYellow(5);
-    return;
-  }
-  if (lastPackageSuccess){
-    ledBlue();
-  } else {
-    ledRed();
-  }
-}
-
-void loop() {
-  updateBattery();
-  updateEncoder(); // update encoder pos, and set encoder up/down bools for one loop
-  updateBuzzer(); // play buzzer if buzzertimer is high
-  updateLCD();
-  updateLED();
-
-  if (encoderUp){
-    setBuzzer();
-  }
-  if (encoderDown){
-    setBuzzer(4);
-  }
-  if (encoderSwPressed){
-    setBuzzer(200);
-  }
-
-
-  dataOut.pot1 = analogRead(JOYSTICK_L_Y);
-  dataOut.pot2 = analogRead(JOYSTICK_L_X);
-
-  esp_now_send(robotAddress, (uint8_t *) &dataOut, sizeof(dataOut));
-
-  delay(100); // because haven't tested ESP_NOW speed yet..
-  // printAll();
-
-
-}
