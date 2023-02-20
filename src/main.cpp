@@ -721,6 +721,10 @@ void updateLCD()
     lcdUpdatePID();
   }
 
+  if (lcdTargetPosition){
+    lcdUpdateTargetPosition();
+  }
+
   // old style:
 
   if (dataOut.key != NO_KEY)
@@ -803,9 +807,6 @@ void lcdSetPID(){
 
 void lcdUpdatePID(){
 
-  lcd.setCursor(0,2);
-  lcd.print(rTargetPositionDegrees);
-  lcd.print(" ");
 
   lcd.setCursor(2,3);
   lcd.print(kP, 1);
@@ -828,14 +829,14 @@ void lcdUpdateTargetPosition(){
   lcd.print(rTargetPositionDegrees);
   lcd.print(" ");
   lcd.setCursor(3,2);
-  lcd.print(dataIn.rInput);
+  lcd.print(dataIn.rInput, 0);
   lcd.print(" ");
 
   lcd.setCursor(11,1);
   lcd.print(lTargetPositionDegrees);
   lcd.print(" ");
   lcd.setCursor(11,2);
-  lcd.print(dataIn.lInput);
+  lcd.print(dataIn.lInput, 0);
   lcd.print(" ");
 }
 
