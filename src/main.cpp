@@ -7,14 +7,13 @@ Status light: Blue = connected wireless, Red = disconnected wireless, Yellow = l
 TODO: The LCD is updated by the Acrobot
 */
 
-
 #include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_ADS1X15.h>
 #include <ESP32Encoder.h>
 #include <LiquidCrystal_I2C.h>
-#include <Keypad_I2C.h> // https://github.com/joeyoung/arduino_keypads/tree/master/Keypad_I2C
-#include <Keypad.h> // https://playground.arduino.cc/Code/Keypad/
+#include <Keypad_I2C.h>    // https://github.com/joeyoung/arduino_keypads/tree/master/Keypad_I2C
+#include <Keypad.h>        // https://playground.arduino.cc/Code/Keypad/
 #include <RunningMedian.h> // https://github.com/RobTillaart/RunningMedian
 #include <WiFi.h>
 #include <esp_now.h>
@@ -32,19 +31,20 @@ TODO: The LCD is updated by the Acrobot
 #define LED_G 14
 #define LED_B 27
 
-#define JOYSTICK_L_Y 32
-#define JOYSTICK_L_X 34
+#define JOYSTICK_L_Y 34
+#define JOYSTICK_L_X 32
 #define JOYSTICK_R_X 36
 #define JOYSTICK_R_Y 39
 
 #define I2CMATRIX 0x38
 
 // ---------------
-// MARK: - FORWARD DECLARATIONS in order of document 
+// MARK: - FORWARD DECLARATIONS in order of document
 
 // ADC
 Adafruit_ADS1115 ads1115; // adc converter
 
+uint32_t adsTimer;
 uint8_t currentAds = 0;
 int16_t sliderLL;
 int16_t sliderLA;
@@ -55,7 +55,7 @@ void readADS();
 
 // BATTERY
 int8_t batteryPercent;
-RunningMedian batterySamples = RunningMedian(64); 
+RunningMedian batterySamples = RunningMedian(64);
 uint32_t batteryAlarmTimer = 0;
 bool chargingState = false;
 
@@ -66,25 +66,34 @@ void updateBattery();
 // BUZZER
 uint32_t buzzerTimer = 0;
 
-void setBuzzer(uint16_t time=100);
+void setBuzzer(uint16_t time = 100);
 void updateBuzzer();
 
 // DATA ESPNOW
 
-uint32_t adsTimer;
 uint32_t dataTimer = 0;
 uint8_t robotAddress[] = {0x94, 0xE6, 0x86, 0x00, 0xE0, 0xD0}; // mac address of robot
-typedef struct struct_data_in {
-  // test data
-  char hi[6];
-  uint16_t pot1;
-  uint16_t pot2;
+typedef struct struct_data_in
+{
+  double kP;
+  double kI;
+  double kD;
+
+  double rInput;
+  double lInput;
+
 } struct_data_in;
 
+double kP = 0.2;
+double kI = 0;
+double kD = 0;
+
+struct_data_in dataIn;
 
 // data out:
 
-typedef struct struct_data_out {
+typedef struct struct_data_out
+{
   int16_t joystickLX;
   int16_t joystickLY;
   int16_t joystickRX;
@@ -102,18 +111,31 @@ typedef struct struct_data_out {
 
   int8_t batteryPercent;
 
+  double kP;
+  double kI;
+  double kD;
+
+  double lP;
+  double lI;
+  double lD;
+
+  uint16_t rTargetPositionDegrees;
+  uint16_t lTargetPositionDegrees;
+
 } struct_data_out;
 
-struct_data_in dataIn;
+uint16_t rTargetPositionDegrees = 180;
+uint16_t lTargetPositionDegrees = 180;
+
 struct_data_out dataOut;
 
 esp_now_peer_info_t peerInfo;
 bool lastPackageSuccess = false;
 
-void collectData();
+void prepareData();
 void sendData();
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status);
-void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len);
+void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len);
 
 // ENCODER
 ESP32Encoder encoder;
@@ -124,26 +146,45 @@ bool encoderSwDown = false;
 bool encoderSwPressed = false;
 
 void updateEncoder();
+void encoderPID();
+
 
 // KEYPAD MATRIX
-const byte ROWS = 4; 
-const byte COLS = 4; 
+const byte ROWS = 4;
+const byte COLS = 4;
 char hexaKeys[ROWS][COLS] = {
-  {'1','2','3','A'},
-  {'4','5','6','B'},
-  {'7','8','9','C'},
-  {'*','0','#','D'}
-};
-byte rowPins[ROWS] = {0, 1, 2, 3}; //connect to the row pinouts of the keypad
-byte colPins[COLS] = {4, 5, 6, 7}; //connect to the column pinouts of the keypad
-Keypad_I2C keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS, I2CMATRIX); 
+    {'1', '2', '3', 'A'},
+    {'4', '5', '6', 'B'},
+    {'7', '8', '9', 'C'},
+    {'*', '0', '#', 'D'}};
+byte rowPins[ROWS] = {0, 1, 2, 3}; // connect to the row pinouts of the keypad
+byte colPins[COLS] = {4, 5, 6, 7}; // connect to the column pinouts of the keypad
+Keypad_I2C keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS, I2CMATRIX);
+
+void checkButtons();
 
 // LCD
-LiquidCrystal_I2C lcd(0x27,20,4);
+LiquidCrystal_I2C lcd(0x27, 20, 4);
 uint32_t lcdTimer = 0;
 
 void setLCD();
 void updateLCD();
+void lcdAllModesOff();
+
+bool lcdJoystick = false;
+void lcdSetJoystick();
+void lcdUpdateJoystick();
+
+bool lcdSlider = false;
+void lcdUpdateSlider();
+
+bool lcdPID = true;
+void lcdSetPID();
+void lcdUpdatePID();
+
+bool lcdTargetPosition = true;
+void lcdSetTargetPosition();
+void lcdUpdateTargetPosition();
 
 // LED
 void ledRed(uint8_t);
@@ -158,13 +199,13 @@ uint32_t printTimer = 0;
 
 void printAll();
 
-
 // END FORWARD DECLARATIONS
 // **********************************
 
 // MARK: -Setup
 
-void setup() {
+void setup()
+{
 
   pinMode(LED_R, OUTPUT);
   pinMode(LED_G, OUTPUT);
@@ -184,13 +225,13 @@ void setup() {
   Serial.println("keypad added");
 
   lcd.init();
-  lcd.clear();         
-  lcd.backlight(); 
+  lcd.clear();
+  lcd.backlight();
 
   setLCD();
 
   // ESP32encoder library setup
-  ESP32Encoder::useInternalWeakPullResistors=UP;
+  ESP32Encoder::useInternalWeakPullResistors = UP;
   encoder.attachSingleEdge(ENCODER_A, ENCODER_B);
 
   ads1115.begin();
@@ -200,7 +241,8 @@ void setup() {
   WiFi.mode(WIFI_MODE_STA);
 
   WiFi.mode(WIFI_STA);
-  if (esp_now_init() != ESP_OK) {
+  if (esp_now_init() != ESP_OK)
+  {
     Serial.println("Error initializing ESP-NOW");
     return;
   }
@@ -211,12 +253,14 @@ void setup() {
 
   // register peer
   memcpy(peerInfo.peer_addr, robotAddress, 6);
-  peerInfo.channel = 0;  
+  peerInfo.channel = 0;
   peerInfo.encrypt = false;
-  if (esp_now_add_peer(&peerInfo) != ESP_OK){
+  if (esp_now_add_peer(&peerInfo) != ESP_OK)
+  {
     Serial.println("Failed to add peer");
     return;
   }
+
 
   Serial.println("setup done");
 }
@@ -224,35 +268,35 @@ void setup() {
 //**********************************
 // MARK: -Loop
 
-
-void loop() {
+void loop()
+{
+  // TODO test duration of loop
   updateBattery();
   updateEncoder(); // update encoder pos, and set encoder up/down bools for one loop
-  updateBuzzer(); // play buzzer if buzzertimer is high
+  updateBuzzer();  // play buzzer if buzzertimer is high
   updateLCD();
   updateLED();
   readADS();
 
-  collectData();
-  // sendData();
 
-  if (encoderUp){
-    setBuzzer(20);
-    Serial.print("up ");
-    Serial.println(millis());
-  }
-  if (encoderDown){
+  prepareData();
+  sendData();
+  checkButtons();
+
+  if (encoderUp)
+  {
     setBuzzer(4);
-    Serial.print("down ");
-    Serial.println(millis());
   }
-  if (encoderSwPressed){
-    setBuzzer(200);
+  if (encoderDown)
+  {
+    setBuzzer(4);
   }
-
+  if (encoderSwPressed)
+  {
+    setBuzzer(50);
+  }
 
   // printAll();
-
 }
 
 //**********************************
@@ -261,131 +305,156 @@ void loop() {
 //--------------------
 // MARK: - Ads sliders
 
-void readADS(){
+void readADS()
+{
   // based on https://github.com/adafruit/Adafruit_ADS1X15/blob/master/examples/nonblocking/nonblocking.ino
 
-
-  if (!ads1115.conversionComplete()) {
+  if (!ads1115.conversionComplete())
+  {
     return;
   }
 
-  if (currentAds == 0){
+  if (currentAds == 0)
+  {
     sliderRA = ads1115.getLastConversionResults();
     ads1115.startADCReading(ADS1X15_REG_CONFIG_MUX_SINGLE_1, /*continuous=*/false);
   }
-  if (currentAds == 1){
+  if (currentAds == 1)
+  {
     sliderRL = ads1115.getLastConversionResults();
     ads1115.startADCReading(ADS1X15_REG_CONFIG_MUX_SINGLE_2, /*continuous=*/false);
   }
-  if (currentAds == 2){
+  if (currentAds == 2)
+  {
     sliderLL = ads1115.getLastConversionResults();
     ads1115.startADCReading(ADS1X15_REG_CONFIG_MUX_SINGLE_3, /*continuous=*/false);
   }
-  if (currentAds == 3){
+  if (currentAds == 3)
+  {
     sliderLA = ads1115.getLastConversionResults();
     ads1115.startADCReading(ADS1X15_REG_CONFIG_MUX_SINGLE_0, /*continuous=*/false);
   }
 
   currentAds += 1;
   currentAds %= 4;
-
 }
 
-
 // ----------------------------
-// MARK: -Battery 
+// MARK: -Battery
 
-void setModemSleep() {
+void setModemSleep()
+{
   WiFi.setSleep(true);
   setCpuFrequencyMhz(80);
   Serial.println("sleep mode enabled");
 }
 
-void wakeModemSleep() {
+void wakeModemSleep()
+{
   WiFi.setSleep(false);
   setCpuFrequencyMhz(240);
   Serial.println("sleep mode disabled");
 }
 
-void updateBattery(){
+void updateBattery()
+{
   batterySamples.add(analogRead(BATTERY_V));
 
   batteryPercent = map(batterySamples.getAverage(), 2060, 2370, 0, 100); // 2060 =~ 3.65v, 2370 =~ 4.2v
 
   // go to modem sleep
-  if (digitalRead(LOW_POWER_SW) && !chargingState){
+  if (digitalRead(LOW_POWER_SW) && !chargingState)
+  {
     chargingState = true;
     setModemSleep();
   }
-  if (!digitalRead(LOW_POWER_SW) && chargingState){
+  if (!digitalRead(LOW_POWER_SW) && chargingState)
+  {
     chargingState = false;
     wakeModemSleep();
     lcd.init();
-    lcd.clear(); 
+    lcd.clear();
     setLCD();
   }
 
   // low battery alarm
-  if (batteryPercent < 10 && batteryAlarmTimer < millis() && !chargingState){
+  if (batteryPercent < 10 && batteryAlarmTimer < millis() && !chargingState)
+  {
     setBuzzer(300);
     batteryAlarmTimer = millis() + 600;
   }
 }
 
 // ----------------------------
-// MARK: -Buzzer 
+// MARK: -Buzzer
 
-
-void setBuzzer(uint16_t time){
+void setBuzzer(uint16_t time)
+{
   buzzerTimer = millis() + time;
 }
-void updateBuzzer(){
-  if (buzzerTimer > millis()){
+void updateBuzzer()
+{
+  if (buzzerTimer > millis())
+  {
     digitalWrite(BUZZER, HIGH);
-  } else {
+  }
+  else
+  {
     digitalWrite(BUZZER, LOW);
   }
 }
 
 // ----------------------
-// MARK: -Data espnow 
+// MARK: -Data espnow
 
-
-void collectData(){
+void prepareData()
+{
 
   // todo: correct for middle position
 
-  uint16_t joyCorrectedLX = analogRead(JOYSTICK_L_X) ;
-  uint16_t joyCorrectedLY = analogRead(JOYSTICK_L_Y) ;
-  uint16_t joyCorrectedRX = analogRead(JOYSTICK_R_X) ;
-  uint16_t joyCorrectedRY = analogRead(JOYSTICK_R_Y) ;
+  uint16_t joyCorrectedLX = 4095 - analogRead(JOYSTICK_L_X); // invert scale
+  uint16_t joyCorrectedLY = analogRead(JOYSTICK_L_Y);
+  uint16_t joyCorrectedRX = analogRead(JOYSTICK_R_X);
+  uint16_t joyCorrectedRY = 4095 - analogRead(JOYSTICK_R_Y); // invert scale
 
-  uint16_t joyCenterLX = 1870;
+  uint16_t joyCenterLX = 2225; // unflipped: 1870
   uint16_t joyCenterLY = 1860;
   uint16_t joyCenterRX = 1840;
-  uint16_t joyCenterRY = 1920;
+  uint16_t joyCenterRY = 2175; // unflipped: 1920
 
-  if (joyCorrectedLX < joyCenterLX){
+  if (joyCorrectedLX < joyCenterLX)
+  {
     joyCorrectedLX = map(joyCorrectedLX, 0, joyCenterLX, 0, 2047);
-  } else {
+  }
+  else
+  {
     joyCorrectedLX = map(joyCorrectedLX, joyCenterLX, 4095, 2048, 4095);
   }
 
-  if (joyCorrectedLY < joyCenterLY){
+  if (joyCorrectedLY < joyCenterLY)
+  {
     joyCorrectedLY = map(joyCorrectedLY, 0, joyCenterLY, 0, 2047);
-  } else {
+  }
+  else
+  {
     joyCorrectedLY = map(joyCorrectedLY, joyCenterLY, 4095, 2048, 4095);
   }
 
-  if (joyCorrectedRX < joyCenterRX){
+  if (joyCorrectedRX < joyCenterRX)
+  {
     joyCorrectedRX = map(joyCorrectedRX, 0, joyCenterRX, 0, 2047);
-  } else {
+  }
+  else
+  {
     joyCorrectedRX = map(joyCorrectedRX, joyCenterRX, 4095, 2048, 4095);
   }
 
-  if (joyCorrectedRY < joyCenterRY){
+  if (joyCorrectedRY < joyCenterRY)
+  {
     joyCorrectedRY = map(joyCorrectedRY, 0, joyCenterRY, 0, 2047);
-  } else {
+  }
+  else
+  {
     joyCorrectedRY = map(joyCorrectedRY, joyCenterRY, 4095, 2048, 4095);
   }
 
@@ -396,13 +465,12 @@ void collectData(){
 
   // ads1115 is very slow, only process every 100ms...
   // if ( adsTimer < millis()){
-    dataOut.sliderLL = sliderLL;
-    dataOut.sliderLA = sliderLA;
-    dataOut.sliderRL = sliderRL;
-    dataOut.sliderRA = sliderRA;
+  dataOut.sliderLL = sliderLL;
+  dataOut.sliderLA = sliderLA;
+  dataOut.sliderRL = sliderRL;
+  dataOut.sliderRA = sliderRA;
   //   adsTimer = millis() + 5000;
   // }
-  
 
   dataOut.encoderPos = encoderPos;
   dataOut.encoderSwDown = encoderSwDown;
@@ -410,92 +478,277 @@ void collectData(){
   dataOut.key = keypad.getKey();
 
   dataOut.batteryPercent = batteryPercent;
+
+  dataOut.kP = kP;
+  dataOut.kI = kI;
+  dataOut.kD = kD;
+
+  dataOut.rTargetPositionDegrees = rTargetPositionDegrees;
+  dataOut.lTargetPositionDegrees = lTargetPositionDegrees;
+
 }
 
-void sendData(){
-  
-  if (dataTimer < millis()){
-    esp_now_send(robotAddress, (uint8_t *) &dataOut, sizeof(dataOut));
+void sendData()
+{
+
+  if (dataTimer < millis())
+  {
+    esp_now_send(robotAddress, (uint8_t *)&dataOut, sizeof(dataOut));
+
+    dataTimer = millis() + 2;
   }
   // send once every 2 ms.
-  dataTimer = millis() + 2;
 };
 
 // Callback when data is sent
-void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
+{
   // Serial.print("\r\nLast Packet Send Status:\t");
   // Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
   lastPackageSuccess = status == ESP_NOW_SEND_SUCCESS;
 
-  //Note that too short interval between sending two ESP-NOW data may lead to disorder of sending callback function. So, it is recommended that sending the next ESP-NOW data after the sending callback function of the previous sending has returned.
-  // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/network/esp_now.html
+  // Note that too short interval between sending two ESP-NOW data may lead to disorder of sending callback function. So, it is recommended that sending the next ESP-NOW data after the sending callback function of the previous sending has returned.
+  //  https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/network/esp_now.html
 }
 
-void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
+void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
+{
   memcpy(&dataIn, incomingData, sizeof(dataIn));
   Serial.print("Bytes received: ");
   Serial.println(len);
-  // pot1 = dataIn.pot1;
-  // pot2 = dataIn.pot2;
-  // strcpy(hi, dataIn.hi);
+
+  // only after boot
+  if (millis() < 1000){
+    kP = dataIn.kP;
+    kI = dataIn.kI;
+    kD = dataIn.kD;
+  }
+
 }
 
 // -----------------------
 // MARK: - Encoder
 
-void updateEncoder(){
+void updateEncoder()
+{
   int16_t newPos = encoder.getCount();
   bool newSw = !digitalRead(ENCODER_SW);
 
-  if (newPos > encoderPos){
+  if (newPos > encoderPos)
+  {
     encoderUp = true;
-  } else {
+  }
+  else
+  {
     encoderUp = false;
   }
 
-  if (newPos < encoderPos){
+  if (newPos < encoderPos)
+  {
     encoderDown = true;
-  } else {
+  }
+  else
+  {
     encoderDown = false;
   }
 
   // switch
-  if (newSw == true && encoderSwDown == false){
+  if (newSw == true && encoderSwDown == false)
+  {
     encoderSwPressed = true;
-  } else {
+  }
+  else
+  {
     encoderSwPressed = false;
   }
 
   encoderPos = newPos;
   encoderSwDown = newSw;
+
+  encoderPID();
+}
+
+uint8_t encoderPIDSelection = 0;
+
+void encoderPID(){
+
+  if (!lcdPID){
+    return;
+  }
+
+  if (encoderSwPressed){
+    encoderPIDSelection++;
+    encoderPIDSelection %= 3;
+    lcdSetPID();
+  }
+
+  if (encoderUp){
+    if (encoderPIDSelection == 0){
+      kP += 0.2;
+    }
+    if (encoderPIDSelection == 1){
+      kI += 0.2;
+    }
+    if (encoderPIDSelection == 2){
+      kD += 0.2;
+    }
+  }
+
+  if (encoderDown){
+    if (encoderPIDSelection == 0){
+      kP -= 0.2;
+      kP = max(kP, 0.);
+    }
+    if (encoderPIDSelection == 1){
+      kI -= 0.2;
+      kI = max(kI, 0.);
+    }
+    if (encoderPIDSelection == 2){
+      kD -= 0.2;
+      kD = max(kD, 0.);
+    }
+  }
+
+}
+
+//  -------------------------------
+// MARK: - Keypad matrix
+
+void checkButtons(){
+  if (dataOut.key == '1'){
+    lcdAllModesOff();
+    lcdPID = true;
+    lcdTargetPosition = true;
+    setLCD();
+  }
+  if (dataOut.key == '2'){
+    lcdAllModesOff();
+    lcdJoystick = true;
+    lcdSlider = true;
+    setLCD();
+  }
+
+  if (dataOut.key == '8'){
+    rTargetPositionDegrees = 180;
+    lTargetPositionDegrees = 180;
+  }
+  if (dataOut.key == '4'){
+    rTargetPositionDegrees = 270;
+    lTargetPositionDegrees = 90;
+  }
+  if (dataOut.key == '6'){
+    rTargetPositionDegrees = 90;
+    lTargetPositionDegrees = 270;
+  }
+  if (dataOut.key == '7'){
+    rTargetPositionDegrees = 225;
+    lTargetPositionDegrees = 135;
+  }
+  if (dataOut.key == '9'){
+    rTargetPositionDegrees = 135;
+    lTargetPositionDegrees = 225;
+  }
+  // standing
+  if (dataOut.key == 'A'){
+    rTargetPositionDegrees = 175;
+    lTargetPositionDegrees = 175;
+  }
+  if (dataOut.key == 'B'){
+    rTargetPositionDegrees = 170;
+    lTargetPositionDegrees = 170;
+  }
+  if (dataOut.key == 'C'){
+    rTargetPositionDegrees = 165;
+    lTargetPositionDegrees = 165;
+  }
+  if (dataOut.key == 'D'){
+    rTargetPositionDegrees = 160;
+    lTargetPositionDegrees = 160;
+  }
+
+  // babysteps
+  if (dataOut.key == '*'){
+    rTargetPositionDegrees = 200;
+    lTargetPositionDegrees = 160;
+  }
+  if (dataOut.key == '#'){
+    rTargetPositionDegrees = 160;
+    lTargetPositionDegrees = 200;
+  }
+
+
 }
 
 //  -------------------------------
 // MARK: - Lcd
 
-void setLCD(){
+void setLCD()
+{
   lcd.clear();
 
-  lcd.setCursor(0,0);   
-  lcd.print("JLX: ");
-  lcd.setCursor(0,1);   
-  lcd.print("JLY: ");
-  lcd.setCursor(0,2);   
-  lcd.print("JRX: ");
-  lcd.setCursor(0,3);   
-  lcd.print("JRY: ");
+  if (lcdJoystick){
+    lcdSetJoystick();
+  }
+
+  if (lcdPID){
+    lcdSetPID();
+  }
+
+  if (lcdTargetPosition){
+    lcdSetTargetPosition();
+  }
 }
 
-//TODO: Create multiple modes, that can be combined (battery + debug, or battery + menu). Switching mode triggers clear.
-void updateLCD(){
 
-  if (lcdTimer > millis()){
+void updateLCD()
+{
+
+  if (lcdTimer > millis())
+  {
     return;
   }
   lcdTimer = millis() + 200; // update every 200 milliseconds
 
+  if (lcdJoystick){
+    lcdUpdateJoystick();
+  }
+
+  if (lcdSlider){
+    lcdUpdateSlider();
+  }
+
+  if (lcdPID){
+    lcdUpdatePID();
+  }
+
+  // old style:
+
+  if (dataOut.key != NO_KEY)
+  {
+    lcd.setCursor(15, 0);
+    lcd.print(dataOut.key);
+  }
+
+  lcd.setCursor(18, 0);
+  char batPerc[3];
+  sprintf(batPerc, "%02d", batteryPercent);
+  lcd.print(batPerc);
+}
+
+void lcdSetJoystick(){
+  lcd.setCursor(0, 0);
+  lcd.print("JLX: ");
+  lcd.setCursor(0, 1);
+  lcd.print("JLY: ");
+  lcd.setCursor(0, 2);
+  lcd.print("JRX: ");
+  lcd.setCursor(0, 3);
+  lcd.print("JRY: ");
+}
+
+void lcdUpdateJoystick(){
   char joyLX[5]; // amount of characters in string + 1
-  char joyLY[5]; 
+  char joyLY[5];
   char joyRX[5];
   char joyRY[5];
   sprintf(joyLX, "%04d", dataOut.joystickLX);
@@ -503,93 +756,153 @@ void updateLCD(){
   sprintf(joyRX, "%04d", dataOut.joystickRX);
   sprintf(joyRY, "%04d", dataOut.joystickRY);
 
-  lcd.setCursor(4,0);   
+  lcd.setCursor(4, 0);
   lcd.print(joyLX);
-  lcd.setCursor(4,1);   
+  lcd.setCursor(4, 1);
   lcd.print(joyLY);
-  lcd.setCursor(4,2);   
+  lcd.setCursor(4, 2);
   lcd.print(joyRX);
-  lcd.setCursor(4,3);   
+  lcd.setCursor(4, 3);
   lcd.print(joyRY);
+}
 
+void lcdUpdateSlider(){
   char slideLLeg[6]; // amount of characters in string + 1
-  char slideLArm[6]; 
+  char slideLArm[6];
   char slideRLeg[6];
   char slideRArm[6];
-  sprintf(slideLLeg, "%05d",dataOut.sliderLL);
-  sprintf(slideLArm, "%05d",dataOut.sliderLA); // 4 digit string with leading zeros
-  sprintf(slideRLeg, "%05d",dataOut.sliderRL);
-  sprintf(slideRArm, "%05d",dataOut.sliderRA);
+  sprintf(slideLLeg, "%05d", dataOut.sliderLL);
+  sprintf(slideLArm, "%05d", dataOut.sliderLA); // 4 digit string with leading zeros
+  sprintf(slideRLeg, "%05d", dataOut.sliderRL);
+  sprintf(slideRArm, "%05d", dataOut.sliderRA);
 
   // print ads
-  lcd.setCursor(9,0);   
+  lcd.setCursor(9, 0);
   lcd.print(slideLLeg);
-  lcd.setCursor(9,1);   
+  lcd.setCursor(9, 1);
   lcd.print(slideLArm);
-  lcd.setCursor(9,2);   
+  lcd.setCursor(9, 2);
   lcd.print(slideRLeg);
-  lcd.setCursor(9,3);   
+  lcd.setCursor(9, 3);
   lcd.print(slideRArm);
+}
 
-  if (dataOut.key != NO_KEY){
-    lcd.setCursor(15,0);
-    lcd.print(dataOut.key);
-  } 
-  
-  lcd.setCursor(18,0);
-  char batPerc[3];
-  sprintf(batPerc, "%02d", batteryPercent);
-  lcd.print(batPerc);
+void lcdSetPID(){
+  lcd.setCursor(0, 3);
+
+  if (encoderPIDSelection == 0){
+    lcd.print("P=     i:     d:");
+  }
+  if (encoderPIDSelection == 1){
+    lcd.print("p:     I=     d:");
+  }
+  if (encoderPIDSelection == 2){
+    lcd.print("p:     i:     D=");
+  }
+}
+
+void lcdUpdatePID(){
+
+  lcd.setCursor(0,2);
+  lcd.print(rTargetPositionDegrees);
+  lcd.print(" ");
+
+  lcd.setCursor(2,3);
+  lcd.print(kP, 1);
+  lcd.setCursor(9,3);
+  lcd.print(kI, 1);
+  lcd.setCursor(16,3);
+  lcd.print(kD, 1);
 
 }
 
-// --------------------------------
-// MARK: - Led 
+void lcdSetTargetPosition(){
+  lcd.setCursor(0,1);
+  lcd.print("tR:     tL:");
+  lcd.setCursor(0,2);
+  lcd.print("pR:     pL:");
+}
 
-void ledRed(uint8_t brightness = 10){
+void lcdUpdateTargetPosition(){
+  lcd.setCursor(3,1);
+  lcd.print(rTargetPositionDegrees);
+  lcd.print(" ");
+  lcd.setCursor(3,2);
+  lcd.print(dataIn.rInput);
+  lcd.print(" ");
+
+  lcd.setCursor(11,1);
+  lcd.print(lTargetPositionDegrees);
+  lcd.print(" ");
+  lcd.setCursor(11,2);
+  lcd.print(dataIn.lInput);
+  lcd.print(" ");
+}
+
+void lcdAllModesOff(){
+  lcdJoystick = false;
+  lcdSlider = false;
+  lcdPID = false;
+}
+
+// --------------------------------
+// MARK: - Led
+
+void ledRed(uint8_t brightness = 10)
+{
   analogWrite(LED_R, brightness);
   analogWrite(LED_G, 0);
   analogWrite(LED_B, 0);
 }
 
-void ledGreen(uint8_t brightness = 10){
+void ledGreen(uint8_t brightness = 10)
+{
   analogWrite(LED_R, 0);
   analogWrite(LED_G, brightness);
   analogWrite(LED_B, 0);
 }
 
-void ledBlue(uint8_t brightness = 10){
+void ledBlue(uint8_t brightness = 10)
+{
   analogWrite(LED_R, 0);
-  analogWrite(LED_B, brightness);
   analogWrite(LED_G, 0);
+  analogWrite(LED_B, brightness);
 }
 
-void ledYellow(uint8_t brightness = 10){
+void ledYellow(uint8_t brightness = 10)
+{
   analogWrite(LED_R, brightness);
   analogWrite(LED_G, brightness * 0.4);
   analogWrite(LED_B, 0);
 }
 
-void ledWhite(uint8_t brightness = 10){
+void ledWhite(uint8_t brightness = 10)
+{
   analogWrite(LED_R, brightness);
   analogWrite(LED_G, brightness);
   analogWrite(LED_B, brightness);
 }
 
-void ledOff(){
+void ledOff()
+{
   analogWrite(LED_R, 0);
   analogWrite(LED_G, 0);
   analogWrite(LED_B, 0);
 }
 
-void updateLED(){
-  if (chargingState){
+void updateLED()
+{
+  if (chargingState)
+  {
     ledYellow(5);
     return;
   }
-  if (lastPackageSuccess){
+  if (lastPackageSuccess)
+  {
     ledBlue();
-  } else {
+  }
+  else
+  {
     ledRed();
   }
 }
@@ -597,8 +910,10 @@ void updateLED(){
 // --------------
 // MARK: - Print
 
-void printAll(){
-  if (printTimer < millis()){
+void printAll()
+{
+  if (printTimer < millis())
+  {
     // Serial.print(analogRead(SLIDER_L_ARM));
     // Serial.print(",");
     // Serial.print(analogRead(JOYSTICK_L_X));
@@ -623,4 +938,3 @@ void printAll(){
     printTimer = millis() + 10; // print every 10 ms
   }
 }
-
