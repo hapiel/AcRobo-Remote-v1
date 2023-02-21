@@ -163,6 +163,8 @@ Keypad_I2C keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS, I2CMATRIX)
 
 void checkButtons();
 
+
+
 // LCD
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 uint32_t lcdTimer = 0;
@@ -186,6 +188,18 @@ bool lcdTargetPosition = true;
 void lcdSetTargetPosition();
 void lcdUpdateTargetPosition();
 
+bool lcdModeName = true;
+void lcdSetModeName();
+
+
+enum remoteModes {
+  poseMode,
+  sliderMode,
+  moveMode
+};
+
+remoteModes remoteMode = poseMode;
+
 // LED
 void ledRed(uint8_t);
 void ledGreen(uint8_t);
@@ -193,6 +207,39 @@ void ledBlue(uint8_t);
 void ledYellow(uint8_t);
 void ledWhite(uint8_t);
 void updateLED();
+
+// MOVES
+
+uint32_t moveTimer = 0;
+
+enum moveList{
+  stop,
+  relax,
+  stand,
+  walk,
+  walkLarge,
+  pirouette,
+  acroyogaSequence
+};
+
+moveList move = stop;
+
+void startMove(moveList);
+void updateMoves();
+bool moveTimePassed(u32_t time);
+
+// POSITIONS
+
+uint16_t forwardLimit = 90;
+uint16_t backwardLimit = 270;
+
+uint16_t withinLimits(uint16_t position);
+void pBow(int16_t upperBodyDegrees = 45);
+void pStand();
+void pStep(int8_t degrees = 20, bool rightFront = true);
+void pKick(int8_t degrees = 90, bool rightFront = true);
+
+
 
 // PRINT
 uint32_t printTimer = 0;
@@ -278,9 +325,13 @@ void loop()
   updateLED();
   readADS();
 
+  
+  // in slider mode, send continuously.
+  // if (lcdSlider){
+    
+  //   sendData();
+  // }
 
-  prepareData();
-  sendData();
   checkButtons();
 
   if (encoderUp)
@@ -394,12 +445,9 @@ void setBuzzer(uint16_t time)
 }
 void updateBuzzer()
 {
-  if (buzzerTimer > millis())
-  {
+  if (buzzerTimer > millis()) {
     digitalWrite(BUZZER, HIGH);
-  }
-  else
-  {
+  } else {
     digitalWrite(BUZZER, LOW);
   }
 }
@@ -474,8 +522,6 @@ void prepareData()
 
   dataOut.encoderPos = encoderPos;
   dataOut.encoderSwDown = encoderSwDown;
-
-  dataOut.key = keypad.getKey();
 
   dataOut.batteryPercent = batteryPercent;
 
@@ -615,67 +661,92 @@ void encoderPID(){
 // MARK: - Keypad matrix
 
 void checkButtons(){
-  if (dataOut.key == '1'){
-    lcdAllModesOff();
-    lcdPID = true;
-    lcdTargetPosition = true;
-    setLCD();
-  }
-  if (dataOut.key == '2'){
-    lcdAllModesOff();
-    lcdJoystick = true;
-    lcdSlider = true;
+
+  char keyInput = keypad.getKey();
+  dataOut.key = keyInput;
+
+
+  if (keyInput == '1'){
+    remoteMode = poseMode;
     setLCD();
   }
 
-  if (dataOut.key == '8'){
-    rTargetPositionDegrees = 180;
-    lTargetPositionDegrees = 180;
-  }
-  if (dataOut.key == '4'){
-    rTargetPositionDegrees = 270;
-    lTargetPositionDegrees = 90;
-  }
-  if (dataOut.key == '6'){
-    rTargetPositionDegrees = 90;
-    lTargetPositionDegrees = 270;
-  }
-  if (dataOut.key == '7'){
-    rTargetPositionDegrees = 225;
-    lTargetPositionDegrees = 135;
-  }
-  if (dataOut.key == '9'){
-    rTargetPositionDegrees = 135;
-    lTargetPositionDegrees = 225;
-  }
-  // standing
-  if (dataOut.key == 'A'){
-    rTargetPositionDegrees = 175;
-    lTargetPositionDegrees = 175;
-  }
-  if (dataOut.key == 'B'){
-    rTargetPositionDegrees = 170;
-    lTargetPositionDegrees = 170;
-  }
-  if (dataOut.key == 'C'){
-    rTargetPositionDegrees = 165;
-    lTargetPositionDegrees = 165;
-  }
-  if (dataOut.key == 'D'){
-    rTargetPositionDegrees = 160;
-    lTargetPositionDegrees = 160;
+  if (keyInput == '2'){
+    remoteMode = sliderMode;
+    kP = 0.2;
+    setLCD();
   }
 
-  // babysteps
-  if (dataOut.key == '*'){
-    rTargetPositionDegrees = 200;
-    lTargetPositionDegrees = 160;
-  }
-  if (dataOut.key == '#'){
-    rTargetPositionDegrees = 160;
-    lTargetPositionDegrees = 200;
+  if (keyInput == '3'){
+    remoteMode = moveMode;
+    startMove(relax);
+    setLCD();
   }
 
+
+  if (remoteMode == poseMode){
+    if (keyInput == '0'){
+      pStand();
+    }
+
+      // babysteps
+    if (keyInput == '*'){
+      pStep(20, false);
+    }
+    if (keyInput == '#'){
+      pStep(20, true);
+    }
+
+    if (keyInput == '7'){
+      pKick(90, false);
+    }
+    if (keyInput == '9'){
+      pKick(90, true);
+    }
+
+    if (keyInput == '8'){
+      pBow(45);
+    }
+
+    // send data only on button press
+    if (lcdTargetPosition){
+      if (keyInput != NO_KEY){
+        prepareData();
+        sendData();
+      }
+    }
+  }
+
+  if (remoteMode == sliderMode){
+    lTargetPositionDegrees = map(sliderLL, 0, 17620, backwardLimit, forwardLimit);
+    rTargetPositionDegrees = map(sliderRL, 0, 17620, backwardLimit, forwardLimit);
+    prepareData();
+    sendData();
+  }
+
+  if (remoteMode == moveMode){
+
+    if (keyInput == '4'){
+      startMove(relax);
+    }
+
+    if (keyInput == '5'){
+      startMove(stop);
+    }
+
+    if (keyInput == '6'){
+      startMove(stand);
+    }
+
+    if (keyInput == '7'){
+      startMove(walk);
+    }
+
+
+    updateMoves();
+    prepareData();
+    sendData();
+  }
 
 }
 
@@ -697,6 +768,11 @@ void setLCD()
   if (lcdTargetPosition){
     lcdSetTargetPosition();
   }
+
+  if (lcdModeName){
+    lcdSetModeName();
+  }
+
 }
 
 
@@ -725,13 +801,7 @@ void updateLCD()
     lcdUpdateTargetPosition();
   }
 
-  // old style:
-
-  if (dataOut.key != NO_KEY)
-  {
-    lcd.setCursor(15, 0);
-    lcd.print(dataOut.key);
-  }
+  // old style, battery:
 
   lcd.setCursor(18, 0);
   char batPerc[3];
@@ -806,18 +876,16 @@ void lcdSetPID(){
 }
 
 void lcdUpdatePID(){
-
-
   lcd.setCursor(2,3);
   lcd.print(kP, 1);
   lcd.setCursor(9,3);
   lcd.print(kI, 1);
   lcd.setCursor(16,3);
   lcd.print(kD, 1);
-
 }
 
 void lcdSetTargetPosition(){
+  lcd.setCursor(0,0);
   lcd.setCursor(0,1);
   lcd.print("tR:     tL:");
   lcd.setCursor(0,2);
@@ -840,11 +908,26 @@ void lcdUpdateTargetPosition(){
   lcd.print(" ");
 }
 
+void lcdSetModeName(){
+  lcd.setCursor(0,0);
+  if (remoteMode == poseMode){
+    lcd.print("Pose mode");
+  }
+  if (remoteMode == sliderMode){
+    lcd.print("Slider mode");
+  }
+  if (remoteMode == moveMode){
+    lcd.print("Move mode");
+  }
+}
+
 void lcdAllModesOff(){
   lcdJoystick = false;
   lcdSlider = false;
   lcdPID = false;
+  lcdModeName = false;
 }
+
 
 // --------------------------------
 // MARK: - Led
@@ -906,6 +989,106 @@ void updateLED()
   {
     ledRed();
   }
+}
+
+// --------------
+// MARK: - Moves
+
+
+
+void startMove(moveList theMove){
+  move = theMove;
+  moveTimer = millis();
+}
+
+void updateMoves(){
+  if (move == relax){
+    kP = 0;
+  }
+
+  if (move == stop){
+    kP = 2;
+    lTargetPositionDegrees = dataIn.lInput;
+    rTargetPositionDegrees = dataIn.rInput;
+
+    // round to even
+    lTargetPositionDegrees = (lTargetPositionDegrees/2) * 2 ;
+    rTargetPositionDegrees = (rTargetPositionDegrees/2) * 2 ;
+  }
+
+  if (move == stand){
+    pStand();
+    kP = 0.6;
+    if (moveTimePassed(300)){
+      kP = 1;
+    }
+    if (moveTimePassed(600)){
+      kP = 1.5;
+    }
+    if (moveTimePassed(1000)){
+      kP = 2;
+    }
+  }
+
+  if (move == walk){
+    kP = 1.4;
+    pStep(20, 1);
+    if (moveTimePassed(800)){
+      pStep(20, 0);
+    }
+    if (moveTimePassed(1600)){
+      startMove(walk);
+    }
+  }
+
+}
+
+bool moveTimePassed(uint32_t time){
+  if ((moveTimer + time) > millis()){
+    return false;
+  }
+  return true;
+}
+
+
+
+// --------------
+// MARK: - Positions
+
+
+uint16_t withinLimits(uint16_t position){
+  return min(max(position, forwardLimit),backwardLimit);
+}
+
+void pBow(int16_t upperBodyDegrees){
+  // -90 to 90
+  rTargetPositionDegrees = withinLimits(180 - upperBodyDegrees);
+  lTargetPositionDegrees = withinLimits(180 - upperBodyDegrees);
+}
+
+void pStand(){
+  pBow(0);
+}
+
+void pStep(int8_t degrees, bool rightFront){
+  // for left, can also do negative value in degrees
+
+  int8_t sign = rightFront * 2 - 1;
+
+  rTargetPositionDegrees = withinLimits(180 + degrees * -sign);
+  lTargetPositionDegrees = withinLimits(180 + degrees * sign);
+}
+
+void pKick(int8_t degrees, bool rightFront){
+  
+  if (rightFront){
+    lTargetPositionDegrees = 180;
+    rTargetPositionDegrees = withinLimits(180 - degrees);
+  } else {
+    rTargetPositionDegrees = 180;
+    lTargetPositionDegrees = withinLimits(180 - degrees);
+  }
+
 }
 
 // --------------
