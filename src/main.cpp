@@ -219,7 +219,12 @@ enum moveList{
   walk,
   walkLarge,
   pirouette,
-  acroyogaSequence
+  acroyogaSequence,
+  jump,
+  flip,
+  musicSequence0,
+  musicSequence1,
+  musicSequence2
 };
 
 moveList move = stop;
@@ -741,6 +746,30 @@ void checkButtons(){
     if (keyInput == '7'){
       startMove(walk);
     }
+    
+    if (keyInput == '8'){
+      startMove(acroyogaSequence);
+    }
+
+    if (keyInput == '9'){
+      startMove(jump);
+    }
+
+    if (keyInput == 'B'){
+      startMove(flip);
+    }
+
+    if (keyInput == 'C'){
+      startMove(pirouette);
+    }
+
+    if (keyInput == '*'){
+      startMove(musicSequence0);
+    }
+
+    if (keyInput == '0'){
+      startMove(musicSequence1);
+    }
 
 
     updateMoves();
@@ -1041,6 +1070,737 @@ void updateMoves(){
     }
   }
 
+  if (move == jump){
+    kP = 1.4;
+    pStand();
+
+    if (moveTimePassed(2000)){
+      kP = 0.6;
+      pBow(45);
+    }
+    if (moveTimePassed(3000)){
+      kP = 4;
+      pBow(-10);
+    }
+    if (moveTimePassed(3800)){
+      kP = 2;
+      pBow(10);
+    }
+    if (moveTimePassed(6000)){
+      kP = 0.8;
+      pStand();
+    }
+  }
+
+  if (move == flip){
+    kP = 1.4;
+    pStand();
+
+    if (moveTimePassed(2000)){
+      kP = 1;
+      pBow(15);
+    }
+    if (moveTimePassed(3000)){
+      kP = 2;
+      pStand();
+    }
+    if (moveTimePassed(3300)){
+      kP = 3;
+      pKick(90, 1);
+    }
+    if (moveTimePassed(3500)){
+      kP = 2;
+      pStep(90, 1);
+    }
+    if (moveTimePassed(4300)){
+      kP = 1.5;
+      pBow(20);
+    }
+    if (moveTimePassed(5500)){
+      kP = 1.5;
+      pStand();
+    }
+  }
+
+  if (move == pirouette){
+    kP = 1.4;
+    pStand();
+
+    if (moveTimePassed(2000)){
+      kP = 3;
+      rTargetPositionDegrees = 200;
+      lTargetPositionDegrees = 170;
+    }
+    if (moveTimePassed(3000)){
+      kP = 2;
+      pKick(90);
+    }
+    if (moveTimePassed(3450)){
+      kP = 2;
+      pBow(10);
+    }
+    if (moveTimePassed(3800)){
+      kP = 1.8;
+      pStand();
+    }
+  }
+
+  if (move == acroyogaSequence){
+    kP = 1.4;
+    pStand();
+
+    uint32_t moveTime = 0;
+
+    // fall to bird
+    if (moveTimePassed(moveTime += 3000)){
+      kP = 1.8;
+      pBow(25);
+    }
+
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 1.2;
+      pBow(15);
+    }
+    if (moveTimePassed(moveTime += 2000)){
+      kP = 2;
+      pStand();
+    }
+
+    // swimming
+    if (moveTimePassed(moveTime += 4500)){
+      kP = 2;
+      pKick(-20, 1);
+    }
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 0.5;
+      pStand();
+    }
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 2;
+      pKick(-20, 0);
+    }
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 0.5;
+      pStand();
+    }
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 2;
+      pKick(-20, 1);
+    }
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 0.5;
+      pStand();
+    }
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 2;
+      pKick(-20, 0);
+    }
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 0.5;
+      pStand();
+    }
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 2;
+      pKick(-20, 1);
+    }
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 0.5;
+      pStand();
+    }
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 2;
+      pKick(-20, 0);
+    }
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 0.5;
+      pStand();
+    }
+
+    // cloth hanger
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 1.6;
+      pStand();
+    }
+    if (moveTimePassed(moveTime += 3000)){
+      kP = 0.3;
+      pBow(90);
+    }
+    if (moveTimePassed(moveTime += 5000)){
+      kP = 2;
+      pBow(76);
+    }
+
+    // kick naar bolkje
+
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 1.2;
+      pKick(90, 1);
+    }
+    if (moveTimePassed(moveTime += 1500)){
+      kP = 0.7;
+      pStep(75, 1);
+    }
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 1;
+      pStep(60, 1);
+    }
+    if (moveTimePassed(moveTime += 500)){
+      kP = 1.2;
+      pStep(50, 1);
+    }
+    if (moveTimePassed(moveTime += 500)){
+      kP = 1;
+      pStep(35, 1);
+    }
+    if (moveTimePassed(moveTime += 500)){
+      kP = 1.8;
+      pStep(10, 1);
+    }
+
+    // swim in bolk
+
+    if (moveTimePassed(moveTime += 1500)){
+      kP = 1;
+      pStep(10, 0);
+    }
+    if (moveTimePassed(moveTime += 1500)){
+      kP = 1;
+      pStep(10, 1);
+    }
+    if (moveTimePassed(moveTime += 800)){
+      kP = 1.2;
+      pStep(10, 0);
+    }
+    if (moveTimePassed(moveTime += 800)){
+      kP = 1.2;
+      pStep(10, 1);
+    }
+
+    // to knees
+    if (moveTimePassed(moveTime += 4000)){
+      kP = 1;
+      pStep(10, 0);
+    }
+
+    if (moveTimePassed(moveTime += 800)){
+      kP = 0.5;
+      pStep(45, 0);
+    }
+    if (moveTimePassed(moveTime += 800)){
+      kP = 0.5;
+      pStep(75, 0);
+    }
+    if (moveTimePassed(moveTime += 800)){
+      kP = 0.7;
+      pStep(90, 0);
+    }
+    if (moveTimePassed(moveTime += 3000)){
+      kP = 0.5;
+      pKick(90, 1);
+    }
+    if (moveTimePassed(moveTime += 1500)){
+      kP = 0.6;
+      pBow(90);
+    }
+
+    // back to bird
+
+    if (moveTimePassed(moveTime += 3000)){
+      kP = 1.4;
+      pKick(45, 1);
+    }
+    if (moveTimePassed(moveTime += 500)){
+      kP = 1.4;
+      pKick(90, 1);
+    }
+    if (moveTimePassed(moveTime += 2500)){
+      kP = 1;
+      pStand();
+    }
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 2.2;
+      pStand();
+    }
+
+    // back to standing
+    if (moveTimePassed(moveTime += 6000)){
+      kP = 2;
+      pBow(15);
+    }
+
+    if (moveTimePassed(moveTime += 10000)){
+      kP = 2;
+      pBow(10);
+    }
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 1.8;
+      pBow(5);
+    }
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 1.6;
+      pStand();
+    }
+
+
+    // current total time: 76s
+    // Serial.print("acroyoga sequence total time: ");
+    // Serial.println(moveTime);
+
+  }
+
+  // --------------------------------
+  // MARK: - MUSIC SEQUENCE 0 intro
+
+  if (move == musicSequence0){
+
+    // bow
+    kP = 1;
+    pBow(15);
+
+    if (moveTimePassed(2200)){
+      kP = 1;
+      pStand();
+    }
+
+
+    // raise leg, walk.
+
+    if (moveTimePassed(6300)){
+      kP = 1;
+      pKick(45, 1);
+    }
+
+    if (moveTimePassed(8670)){
+      kP = 1.4;
+      pStep(15, 1);
+    }
+
+    if (moveTimePassed(9570)){
+      kP = 1.4;
+      pStep(15, 0);
+    }
+
+    if (moveTimePassed(10560)){
+      kP = 1.4;
+      pStep(15, 1);
+    }
+
+    if (moveTimePassed(11470)){
+      kP = 1.6;
+      pStand();
+    }
+
+    // raise leg, walk.
+
+    if (moveTimePassed(14600)){
+      kP = 1.2;
+      pKick(55, 0);
+    }
+
+    if (moveTimePassed(16550)){
+      kP = 1.4;
+      pStep(20, 0);
+    }
+
+    if (moveTimePassed(17600)){
+      kP = 1.4;
+      pStep(20, 1);
+    }
+
+    if (moveTimePassed(18650)){
+      kP = 1.4;
+      pStep(20, 0);
+    }
+
+    if (moveTimePassed(19600)){
+      kP = 1.6;
+      pStand();
+    }
+    
+    // breathe
+
+    if (moveTimePassed(20700)){
+      kP = 0.8;
+      pBow(15);
+    }
+    if (moveTimePassed(22800)){
+      kP = 1;
+      pBow(4);
+    }
+
+    // walk, pirouette
+
+    if (moveTimePassed(24800)){
+      kP = 1.4;
+      pStep(20, 1);
+    }
+
+    if (moveTimePassed(25900)){
+      kP = 1.4;
+      pStep(20, 0);
+    }
+
+    if (moveTimePassed(26900)){
+      kP = 1.4;
+      pStep(20, 1);
+    }
+
+    if (moveTimePassed(27900)){
+      kP = 1.4;
+      pStep(20, 0);
+    }
+
+    if (moveTimePassed(28900)){
+      kP = 1.8;
+      pStand();
+    }
+    // pirouette
+
+    if (moveTimePassed(29900)){
+      kP = 3;
+      rTargetPositionDegrees = 200;
+      lTargetPositionDegrees = 170;
+    }
+
+    if (moveTimePassed(30900)){
+      kP = 2;
+      pKick(90);
+    }
+    if (moveTimePassed(31350)){
+      kP = 2;
+      pBow(10);
+    }
+    if (moveTimePassed(31700)){
+      kP = 1.8;
+      pStand();
+    }
+
+    // breathe
+    if (moveTimePassed(32870)){
+      kP = 0.8;
+      pBow(15);
+    }
+    if (moveTimePassed(34950)){
+      kP = 1;
+      pBow(4);
+    }
+
+    // jump
+
+    if (moveTimePassed(37150)){
+      kP = 0.6;
+      pBow(45);
+    }
+    if (moveTimePassed(38280)){
+      kP = 4;
+      pBow(-10);
+    }
+    if (moveTimePassed(39000)){
+      kP = 2;
+      pBow(10);
+    }
+    if (moveTimePassed(40200)){
+      kP = 0.8;
+      pStand();
+    }
+
+
+    // step step flip
+    if (moveTimePassed(43550)){
+      kP = 1.4;
+      pStep(20, 1);
+    }
+
+    if (moveTimePassed(44600)){
+      kP = 1.6;
+      pStep(10, 0);
+    }
+
+    if (moveTimePassed(45900)){
+      kP = 3;
+      rTargetPositionDegrees = 90;
+      lTargetPositionDegrees = 190;
+    }
+
+    if (moveTimePassed(46100)){
+      kP = 2;
+      pStep(90, 1);
+    }
+
+    if (moveTimePassed(46900)){
+      kP = 1.5;
+      pBow(20);
+    }
+
+    if (moveTimePassed(49840)){
+      kP = 0.8;
+      pStand();
+    }
+
+    // again step step flip
+
+    if (moveTimePassed(54090)){
+      kP = 1.4;
+      pStep(20, 1);
+    }
+
+    if (moveTimePassed(55120)){
+      kP = 1.6;
+      pStep(10, 0);
+    }
+
+    if (moveTimePassed(56500)){
+      kP = 3;
+      rTargetPositionDegrees = 90;
+      lTargetPositionDegrees = 190;
+    }
+
+    if (moveTimePassed(56700)){
+      kP = 2;
+      pStep(90, 1);
+    }
+
+    if (moveTimePassed(57500)){
+      kP = 1.5;
+      pBow(20);
+    }
+
+    if (moveTimePassed(58500)){
+      kP = 0.8;
+      pStand();
+    }
+
+
+
+    if (moveTimePassed(60000)){
+      startMove(musicSequence1);
+    }
+
+  }
+
+  // --------------------------------
+  // MARK: - MUSIC SEQUENCE 1 yoga
+
+  if (move == musicSequence1){
+
+    kP = 0.8;
+    pStand();
+
+        // bow
+
+    if (moveTimePassed(600)){
+      kP = 0.5;
+      pBow(45);
+    }
+
+    if (moveTimePassed(3160)){
+      kP = 0.8;
+      pStand();
+    }
+
+    // snoek
+
+    // fall to bird
+    if (moveTimePassed(8200)){
+      kP = 1.8;
+      pBow(25);
+    }
+
+
+    if (moveTimePassed(9200)){
+      kP = 1.2;
+      pBow(15);
+    }
+    if (moveTimePassed(11200)){
+      kP = 2;
+      pStand();
+    }
+
+    // swimming
+    if (moveTimePassed(12100)){
+      kP = 2;
+      pKick(-20, 1);
+    }
+    if (moveTimePassed(13000)){
+      kP = 0.5;
+      pStand();
+    }
+    if (moveTimePassed(14000)){
+      kP = 2;
+      pKick(-20, 0);
+    }
+    if (moveTimePassed(15000)){
+      kP = 0.5;
+      pStand();
+    }
+    if (moveTimePassed(15985)){
+      kP = 2;
+      pKick(-20, 1);
+    }
+    if (moveTimePassed(17000)){
+      kP = 0.5;
+      pStand();
+    }
+    if (moveTimePassed(17890)){
+      kP = 2;
+      pKick(-20, 0);
+    }
+    if (moveTimePassed(18900)){
+      kP = 0.5;
+      pStand();
+    }
+    if (moveTimePassed(19750)){
+      kP = 2;
+      pKick(-20, 1);
+    }
+    if (moveTimePassed(20800)){
+      kP = 0.5;
+      pStand();
+    }
+    if (moveTimePassed(21665)){
+      kP = 2;
+      pKick(-20, 0);
+    }
+    if (moveTimePassed(22650)){
+      kP = 0.5;
+      pStand();
+    }
+
+     // cloth hanger
+    if (moveTimePassed(25240)){
+      kP = 0.3;
+      pBow(90);
+    }
+    if (moveTimePassed(28800)){
+      kP = 2;
+      pBow(76);
+    }
+
+    // kick naar bolkje
+
+    if (moveTimePassed(29860)){
+      kP = 1.2;
+      pKick(90, 1);
+    }
+    if (moveTimePassed(33270)){
+      kP = 0.7;
+      pStep(75, 1);
+    }
+    if (moveTimePassed(35460)){
+      kP = 1;
+      pStep(60, 1);
+    }
+    if (moveTimePassed(36000)){
+      kP = 1.2;
+      pStep(50, 1);
+    }
+    if (moveTimePassed(36500)){
+      kP = 1;
+      pStep(35, 1);
+    }
+    if (moveTimePassed(37000)){
+      kP = 1.8;
+      pStep(10, 1);
+    }
+
+
+    // swim in bolk
+
+    if (moveTimePassed(38500)){
+      kP = 1;
+      pStep(10, 0);
+    }
+    if (moveTimePassed(40000)){
+      kP = 1;
+      pStep(10, 1);
+    }
+    if (moveTimePassed(40800)){
+      kP = 1.2;
+      pStep(10, 0);
+    }
+    if (moveTimePassed(41600)){
+      kP = 1.2;
+      pStep(10, 1);
+    }
+
+    // to knees
+    if (moveTimePassed(43600)){
+      kP = 1;
+      pStep(10, 0);
+    }
+
+    if (moveTimePassed(44400)){
+      kP = 0.5;
+      pStep(45, 0);
+    }
+    if (moveTimePassed(45200)){
+      kP = 0.5;
+      pStep(75, 0);
+    }
+    if (moveTimePassed(46000)){
+      kP = 0.7;
+      pStep(90, 0);
+    }
+    if (moveTimePassed(48590)){
+      kP = 0.5;
+      pKick(90, 1);
+    }
+    if (moveTimePassed(52600)){
+      kP = 0.6;
+      pBow(90);
+    }
+
+    if (moveTimePassed(60000)){
+      startMove(musicSequence2);
+    }
+
+  }
+
+  // --------------------------------
+  // MARK: - MUSIC SEQUENCE 2 floor
+  if (move == musicSequence2){
+    kP = 0.6;
+    pBow(90);
+
+    // back to bird
+
+    if (moveTimePassed(450)){
+      kP = 1.4;
+      pKick(45, 1);
+    }
+    if (moveTimePassed(950)){
+      kP = 1.4;
+      pKick(90, 1);
+    }
+    if (moveTimePassed(4600)){
+      kP = 1;
+      pStand();
+    }
+    if (moveTimePassed(9400)){
+      kP = 2.2;
+      pStand();
+    }
+
+    // back to standing
+    if (moveTimePassed(11140)){
+      kP = 2;
+      pBow(15);
+    }
+
+    if (moveTimePassed(19870)){
+      kP = 2;
+      pBow(10);
+    }
+    if (moveTimePassed(22000)){
+      kP = 1.8;
+      pBow(5);
+    }
+    if (moveTimePassed(24300)){
+      kP = 1.6;
+      pStand();
+    }
+
+  }
 }
 
 bool moveTimePassed(uint32_t time){
@@ -1049,7 +1809,6 @@ bool moveTimePassed(uint32_t time){
   }
   return true;
 }
-
 
 
 // --------------
