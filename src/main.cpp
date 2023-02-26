@@ -224,7 +224,16 @@ enum moveList{
   flip,
   musicSequence0,
   musicSequence1,
-  musicSequence2
+  musicSequence2,
+  musicSequence3,
+  musicSequence4,
+  musicSequence5,
+  musicSequence6,
+  musicSequence7,
+  musicSequence8,
+  musicSequence9,
+  textSequence0,
+  textSequence1,
 };
 
 moveList move = stop;
@@ -688,6 +697,11 @@ void checkButtons(){
     setLCD();
   }
 
+  if (keyInput == 'A'){
+    remoteMode = moveMode;
+    startMove(textSequence0);
+  }
+
 
   if (remoteMode == poseMode){
     if (keyInput == '0'){
@@ -712,6 +726,8 @@ void checkButtons(){
     if (keyInput == '8'){
       pBow(45);
     }
+
+    
 
     // send data only on button press
     if (lcdTargetPosition){
@@ -748,7 +764,7 @@ void checkButtons(){
     }
     
     if (keyInput == '8'){
-      startMove(acroyogaSequence);
+      startMove(musicSequence4);
     }
 
     if (keyInput == '9'){
@@ -760,7 +776,8 @@ void checkButtons(){
     }
 
     if (keyInput == 'C'){
-      startMove(pirouette);
+      move = musicSequence6;
+      moveTimer = millis() - 51000;
     }
 
     if (keyInput == '*'){
@@ -769,6 +786,14 @@ void checkButtons(){
 
     if (keyInput == '0'){
       startMove(musicSequence1);
+    }
+
+    if (keyInput == '#'){
+      startMove(musicSequence2);
+    }
+
+    if (keyInput == 'A'){
+      startMove(textSequence0);
     }
 
 
@@ -1349,13 +1374,259 @@ void updateMoves(){
   }
 
   // --------------------------------
+  // MARK: - TEXT SEQUENCE 0
+
+  if (move == textSequence0){
+    kP = 0.6;
+    pBow(45);
+
+    if (moveTimePassed(7600)){
+      kP = 0.2;
+      pStand();
+    }
+
+    // raise left
+    if (moveTimePassed(9250)){
+      kP = 0.4;
+      pKick(90, 0);
+    }
+    if (moveTimePassed(9550)){
+      kP = 0.6;
+      pKick(90, 0);
+    }
+    if (moveTimePassed(9950)){
+      kP = 1;
+      pKick(90, 0);
+    }
+
+    // swing excited
+    if (moveTimePassed(19750)){
+      kP = 1;
+      rTargetPositionDegrees = 120;
+    }
+    if (moveTimePassed(20550)){
+      kP = 0.8;
+      rTargetPositionDegrees = 220;
+    }
+    if (moveTimePassed(21190)){
+      kP = 0.8;
+      rTargetPositionDegrees = 120;
+    }
+
+    if (moveTimePassed(29800)){
+      kP = 1.2;
+      rTargetPositionDegrees = 90;
+    }
+
+    // lower left
+
+    if (moveTimePassed(37680)){
+      kP = 0.2;
+      lTargetPositionDegrees = 180;
+    }
+
+    // swing left
+
+    if (moveTimePassed(41760)){
+      kP = 0.8;
+      lTargetPositionDegrees = 120;
+    }
+
+    if (moveTimePassed(42350)){
+      kP = 0.8;
+      lTargetPositionDegrees = 220;
+    }
+    if (moveTimePassed(43250)){
+      kP = 0.2;
+      lTargetPositionDegrees = 180;
+    }
+
+    // left back
+
+    if (moveTimePassed(50830)){
+      kP = 0.7;
+      lTargetPositionDegrees = 235;
+    }
+
+    if (moveTimePassed(56360)){
+      kP = 0.2;
+      pStep(15,1);
+    } 
+
+    // hello people bow
+
+    if (moveTimePassed(59920)){
+      kP = 0.7;
+      pBow(60);
+    } 
+
+    if (moveTimePassed(60000)){
+      startMove(textSequence1);
+    } 
+
+  }
+
+  // --------------------------------
+  // MARK: - TEXT SEQUENCE 1 (+10s)
+
+  if (move == textSequence1){
+    kP = 0.8;
+    pBow(60);
+
+    // hello people bows
+
+    if (moveTimePassed(1500)){
+      kP = 1.6;
+      pBow(90);
+    } 
+
+    if (moveTimePassed(2860)){
+      kP = 0.2;
+      pBow(70);
+    } 
+
+    if (moveTimePassed(3305)){
+      kP = 1.8;
+      pBow(90);
+    } 
+
+    if (moveTimePassed(4500)){
+      kP = 0.2;
+      pBow(70);
+    } 
+
+    if (moveTimePassed(4900)){
+      kP = 1.8;
+      pBow(90);
+    } 
+
+    if (moveTimePassed(6150)){
+      kP = 0.2;
+      pBow(70);
+    } 
+
+    
+    if (moveTimePassed(7070)){
+      kP = 1.8;
+      pBow(90);
+    } 
+
+    if (moveTimePassed(8080)){
+      kP = 0.2;
+      pBow(70);
+    } 
+
+    if (moveTimePassed(8700)){
+      kP = 1.8;
+      pBow(90);
+    } 
+
+    if (moveTimePassed(9880)){
+      kP = 0.2;
+      pBow(70);
+    } 
+    
+    if (moveTimePassed(10600)){
+      kP = 1.8;
+      pBow(90);
+    } 
+
+    if (moveTimePassed(12560)){
+      kP = 0.2;
+      pBow(70);
+    } 
+
+    
+    if (moveTimePassed(13640)){
+      kP = 1.8;
+      pBow(90);
+    } 
+
+    if (moveTimePassed(14680)){
+      kP = 0.2;
+      pBow(70);
+    } 
+
+    // wiggle
+
+    if (moveTimePassed(15800)){
+      kP = 1;
+      rTargetPositionDegrees = 90;
+      lTargetPositionDegrees = 60;
+    } 
+
+    if (moveTimePassed(16130)){
+      kP = 1;
+      rTargetPositionDegrees = 60;
+      lTargetPositionDegrees = 90;
+    } 
+
+    if (moveTimePassed(16430)){
+      kP = 1;
+      rTargetPositionDegrees = 90;
+      lTargetPositionDegrees = 60;
+    } 
+
+    if (moveTimePassed(17680)){
+      kP = 1;
+      rTargetPositionDegrees = 60;
+      lTargetPositionDegrees = 90;
+    } 
+
+    if (moveTimePassed(17940)){
+      kP = 1;
+      rTargetPositionDegrees = 90;
+      lTargetPositionDegrees = 60;
+    } 
+
+    if (moveTimePassed(18230)){
+      kP = 1;
+      rTargetPositionDegrees = 60;
+      lTargetPositionDegrees = 90;
+    } 
+
+    if (moveTimePassed(19090)){
+      kP = 1.2;
+      pBow(90);
+    } 
+
+    if (moveTimePassed(21700)){
+      kP = 0.4;
+      pBow(15);
+    } 
+
+    // but wait
+
+    if (moveTimePassed(56770)){
+      kP = 1.8;
+      pBow(45);
+    } 
+
+    if (moveTimePassed(58070)){
+      kP = 0.2;
+      pStand();
+    } 
+
+
+    if (moveTimePassed(61000)){
+      kP = 1;
+      pStand();
+    } 
+
+    if (moveTimePassed(70000)){
+      startMove(musicSequence0);
+    } 
+
+  }
+
+  // --------------------------------
   // MARK: - MUSIC SEQUENCE 0 intro
 
   if (move == musicSequence0){
 
     // bow
     kP = 1;
-    pBow(15);
+    pBow(10);
 
     if (moveTimePassed(2200)){
       kP = 1;
@@ -1800,8 +2071,871 @@ void updateMoves(){
       pStand();
     }
 
+    // val naar achteren
+
+    if (moveTimePassed(32470)){
+      kP = 1.6;
+      pBow(-15);
+    }
+
+    if (moveTimePassed(33470)){
+      kP = 1;
+      pStand();
+    }
+
+    if (moveTimePassed(38880)){
+      kP = 1.6;
+      pKick(90, 1);
+    }
+
+    if (moveTimePassed(39400)){
+      kP = 2;
+      pKick(90, 1);
+    }
+
+    if (moveTimePassed(43740)){
+      kP = 1.2;
+      pKick(80, 1);
+    }
+    if (moveTimePassed(43840)){
+      kP = 1.2;
+      pKick(70, 1);
+    }
+    if (moveTimePassed(43940)){
+      kP = 1.0;
+      pKick(60, 1);
+    }
+    if (moveTimePassed(44040)){
+      kP = 1.0;
+      pKick(40, 1);
+    }
+    if (moveTimePassed(44140)){
+      kP = 1.0;
+      pKick(20, 1);
+    }
+
+    if (moveTimePassed(44200)){
+      kP = 1;
+      pStand();
+    } 
+
+    // zit
+
+    if (moveTimePassed(46870)){
+      kP = 0.2;
+      pBow(45);
+    } 
+
+    if (moveTimePassed(47250)){
+      kP = 0.8;
+      pBow(90);
+    } 
+
+    // lig
+
+    if (moveTimePassed(56370)){
+      kP = 0.4;
+      pBow(25);
+    } 
+    if (moveTimePassed(57370)){
+      kP = 0.4;
+      pStand();
+    } 
+
+    // rechts omhoog
+
+    if (moveTimePassed(59700)){
+      kP = 0.6;
+      pKick(50);
+    } 
+
+    if (moveTimePassed(60000)){
+      startMove(musicSequence3);
+    } 
   }
+
+  // --------------------------------
+  // MARK: - MUSIC SEQUENCE 3 floor pt2
+
+  if (move == musicSequence3){
+    kP = 0.6;
+    pKick(50);
+
+    if (moveTimePassed(600)){
+      kP = 0.85;
+      pKick(90);
+    } 
+
+    // trap naar split
+
+    if (moveTimePassed(7600)){
+      kP = 0.5;
+      rTargetPositionDegrees = 90;
+      lTargetPositionDegrees = 45;
+    } 
+    if (moveTimePassed(8200)){
+      kP = 0.5;
+      pBow(90);
+    } 
+
+    if (moveTimePassed(8800)){
+      kP = 0.6;
+      pStep(80, 0);
+    } 
+    if (moveTimePassed(9800)){
+      kP = 0.8;
+      pStep(90, 0);
+    } 
+    if (moveTimePassed(10100)){
+      kP = 1.2;
+      pStep(90, 0);
+    } 
+
+    // split opduwen
+
+    if (moveTimePassed(17500)){
+      kP = 3;
+      pStep(45, 0);
+    } 
+
+    if (moveTimePassed(18000)){
+      kP = 2;
+      pStep(45, 0);
+    } 
+
+    if (moveTimePassed(20720)){
+      kP = 0.6;
+      pStep(90, 0);
+    } 
+    if (moveTimePassed(24430)){
+      kP = 0.7;
+      pStep(90, 0);
+    } 
+
+    // split wissel
+
+    if (moveTimePassed(31580)){
+      kP = 0.5;
+      pKick(90, 0);
+    } 
+
+    if (moveTimePassed(32580)){
+      kP = 0.6;
+      pStep(80, 1);
+    } 
+
+    if (moveTimePassed(33100)){
+      kP = 0.6;
+      pStep(90, 1);
+    } 
+
+    // naar rug
+
+    if (moveTimePassed(35650)){
+      kP = 1;
+      pBow(30);
+    }
+
+    if (moveTimePassed(36200)){
+      kP = 0.6;
+      rTargetPositionDegrees = 200;
+      lTargetPositionDegrees = 150;
+    }
+
+    if (moveTimePassed(37200)){
+      kP = 1.2;
+      rTargetPositionDegrees = 180;
+      lTargetPositionDegrees = 170;
+    }
+
+    if (moveTimePassed(37500)){
+      kP = 1.2;
+      pStand();
+    }
+
+    // rol naar zij
+
+    if (moveTimePassed(39700)){
+      kP = 1.4;
+      pStep(25, 1);
+    }
+
+    if (moveTimePassed(41550)){
+      kP = 1;
+      rTargetPositionDegrees = 120;
+      lTargetPositionDegrees = 210;
+    }
+
+    if (moveTimePassed(43700)){
+      kP = 1.2;
+      rTargetPositionDegrees = 200;
+      lTargetPositionDegrees = 190;
+    }
+
+    if (moveTimePassed(44630)){
+      kP = 1;
+      rTargetPositionDegrees = 130;
+      lTargetPositionDegrees = 200;
+    }
+
+    // buik
+    if (moveTimePassed(44630)){
+      kP = 0.8;
+      pBow(-10);
+    }
+
+
+    // been omhoog
+
+    if (moveTimePassed(51950)){
+      kP = 0.7;
+      pKick(-80, 1);
+    }
+    if (moveTimePassed(54020)){
+      kP = 0.8;
+      pBow(-80);
+    }
+    if (moveTimePassed(55020)){
+      kP = 1.2;
+      pBow(-85);
+    }
+
+    // staan
+
+    if (moveTimePassed(58090)){
+      kP = 0.5;
+      pStand();
+    }
+
+    if (moveTimePassed(59090)){
+      kP = 1;
+      pStand();
+    }
+
+    if (moveTimePassed(60000)){
+      startMove(musicSequence4);
+    }
+
+  }
+
+  // --------------------------------
+  // MARK: - MUSIC SEQUENCE 4 standing acro
+
+  if (move == musicSequence4){
+    kP = 1.2;
+    pStand();
+
+    // walk
+    if (moveTimePassed(185)){
+      kP = 1.4;
+      pStep(20, 1);
+    }
+    if (moveTimePassed(1250)){
+      pStep(20, 0);
+    }
+
+    if (moveTimePassed(2215)){
+      pStep(20, 1);
+    }
+    if (moveTimePassed(3265)){
+      pStep(20, 0);
+    }
+
+    if (moveTimePassed(4305)){
+      pStep(20, 1);
+    }
+    if (moveTimePassed(5350)){
+      pStep(20, 0);
+    }
+
+    if (moveTimePassed(6435)){
+      kP = 1.7;
+      pStand();
+    }
+
+    // rug rol
+
+    if (moveTimePassed(9790)){
+      kP = 0.8;
+      pBow(90);
+    }
+
+    if (moveTimePassed(11850)){
+      kP = 1.3;
+      pBow(90);
+    }
+
+
+    if (moveTimePassed(15150)){
+      kP = 0.6;
+      pStand();
+    }
+
+    // shoulder sit
+
+    if (moveTimePassed(21740)){
+      kP = 0.8;
+      pBow(15);
+    }
+    if (moveTimePassed(22780)){
+      kP = 0.8;
+      pBow(30);
+    }
+    if (moveTimePassed(24380)){
+      kP = 1;
+      pBow(70);
+    }
+
+    // uitbouw
+
+    if (moveTimePassed(28780)){
+      kP = 0.8;
+      pKick(70, 0);
+    }
+
+    if (moveTimePassed(30885)){
+      kP = 1;
+      pStand();
+    }
+
+    if (moveTimePassed(32120)){
+      kP = 1;
+      pBow(-20);
+    }
+
+    if (moveTimePassed(35436)){
+      kP = 1;
+      pStand();
+    }
+
+    if (moveTimePassed(36975)){
+      kP = 1;
+      lTargetPositionDegrees = 170;
+      rTargetPositionDegrees = 162;
+    }
+
+    if (moveTimePassed(37600)){
+      kP = 1.8;
+      pStand();
+    }
+
+    // schouder snoek
+
+    if (moveTimePassed(40500)){
+      kP = 1.8;
+      pKick(-14, 1);
+    }
+
+    if (moveTimePassed(41100)){
+      kP = 1.6;
+      pKick(80, 1);
+    }
+
+    if (moveTimePassed(41400)){
+      kP = 1.4;
+      pStep(90, 1);
+    }
+
+    if (moveTimePassed(42100)){
+      kP = 1.0;
+      pBow(30);
+    }
+
+    if (moveTimePassed(43000)){
+      kP = 1.0;
+      pBow(-10);
+    }
+
+    // kopstand
+
+    if (moveTimePassed(48335)){
+      kP = 0.2;
+      pBow(50);
+    }
+    if (moveTimePassed(48800)){
+      kP = 0.5;
+      lTargetPositionDegrees = 110;
+      rTargetPositionDegrees = 90;
+    }
+
+
+    if (moveTimePassed(49999)){
+      startMove(musicSequence5);
+      // jump in time, 50 second sequence to match with full act sound timing
+    }
+
+  }
+
+  // --------------------------------
+  // MARK: - MUSIC SEQUENCE 5 fall
+
+  if (move == musicSequence5){
+
+    // starts going into headstand split
+
+    if (moveTimePassed(1925)){
+      kP = 0.6;
+      lTargetPositionDegrees = 150;
+      rTargetPositionDegrees = 90;
+    }
+
+    if (moveTimePassed(3600)){
+      kP = 0.6;
+      lTargetPositionDegrees = 275;
+      rTargetPositionDegrees = 90;
+    }
+
+    if (moveTimePassed(3900)){
+      kP = 0.8;
+      lTargetPositionDegrees = 275;
+      rTargetPositionDegrees = 90;
+    }
+
+    
+
+    if (moveTimePassed(10335)){
+      kP = 1;
+      lTargetPositionDegrees = 267;
+      rTargetPositionDegrees = 120;
+    }
+
+    // coming down
+
+    if (moveTimePassed(14425)){
+      kP = 0.8;
+      pBow(60);
+    }
+
+    if (moveTimePassed(15646)){
+      kP = 1;
+      pBow(85);
+    }
+
+    if (moveTimePassed(16432)){
+      kP = 0.4;
+      pStand();
+    }
+    if (moveTimePassed(17255)){
+      kP = 1.2;
+      pStand();
+    }
+
+    // fall
+
+    if (moveTimePassed(19309)){
+      kP = 0.6;
+      pBow(-10);
+    } 
+    if (moveTimePassed(21050)){
+      kP = 0.6;
+      pBow(10);
+    } 
+    if (moveTimePassed(20709)){
+      kP = 1.2;
+      pBow(10);
+    } 
+
+    // I don't care 2
+
+    if (moveTimePassed(52500)){
+      kP = 1.2;
+
+      lTargetPositionDegrees = 150;
+      rTargetPositionDegrees = 175;
+    } 
+
+    if (moveTimePassed(53700)){
+      kP = 1.2;
+
+      lTargetPositionDegrees = 205;
+      rTargetPositionDegrees = 170;
+    } 
+    if (moveTimePassed(54100)){
+      kP = 0.4;
+      lTargetPositionDegrees = 185;
+      rTargetPositionDegrees = 175;
+    } 
+
+    if (moveTimePassed(60000)){
+      startMove(musicSequence6);
+    } 
+
+  }
+
+  // --------------------------------
+  // MARK: - MUSIC SEQUENCE 6 floor dialog
+
+  if (move == musicSequence6){
+
+    // I want to see them
+
+    if (moveTimePassed(2450)){
+      kP = 0.9;
+      pBow(25);
+    } 
+    if (moveTimePassed(4340)){
+      kP = 0.9;
+      pBow(5);
+    } 
+
+    if (moveTimePassed(8025)){
+      kP = 0.9;
+      pKick(40);
+    } 
+    if (moveTimePassed(8800)){
+      kP = 0.8;
+      pStand();
+    } 
+
+
+    if (moveTimePassed(14500)){
+      kP = 1.5;
+      pKick(-10);
+    } 
+    if (moveTimePassed(14930)){
+      kP = 1.6;
+      pKick(40);
+    } 
+    if (moveTimePassed(15280)){
+      kP = 1.2;
+      pStep(12,1);
+    } 
+
+    // hello people
+
+    if (moveTimePassed(22222)){
+      kP = 1.4;
+      pStand();
+    } 
+
+    if (moveTimePassed(29635)){
+      kP = 1;
+      pKick(50);
+    } 
+    if (moveTimePassed(31735)){
+      kP = 1;
+      pStand();
+    } 
+
+    // I'm ready
+
+    if (moveTimePassed(40575)){
+      kP = 1;
+      pBow(15);
+    } 
+    if (moveTimePassed(41600)){
+      kP = 1.2;
+      pStand();
+    } 
+
+    // finale
+
+
+    if (moveTimePassed(55485)){
+      kP = 1.2;
+      pKick(30, 1);
+    } 
+
+    if (moveTimePassed(57240)){
+      kP = 1.2;
+
+      lTargetPositionDegrees = 185;
+      rTargetPositionDegrees = 160;
+    } 
+    if (moveTimePassed(59400)){
+      kP = 1.2;
+
+      pBow(20);
+    } 
+
+    if (moveTimePassed(60000)){
+      startMove(musicSequence7);
+    } 
+
+
+  }
+
+  // --------------------------------
+  // MARK: - MUSIC SEQUENCE 7 finale
+
+  if (move == musicSequence7){
+
+    kP = 1.2;
+
+      pBow(20);
+    
+    if (moveTimePassed(1765)){
+      kP = 1;
+
+      lTargetPositionDegrees = 100;
+      rTargetPositionDegrees = 160;
+    } 
+
+    if (moveTimePassed(6360)){
+      kP = 1.6;
+
+      lTargetPositionDegrees = 110;
+      rTargetPositionDegrees = 170;
+    } 
+
+    if (moveTimePassed(7435)){
+      kP = 1.2;
+
+      pStand();
+    } 
+
+    if (moveTimePassed(13204)){
+      kP = 1;
+
+      pKick(10,0);
+    } 
+
+    if (moveTimePassed(13510)){
+      kP = 1;
+
+      pKick(20,0);
+    } 
+
+    if (moveTimePassed(13800)){
+      kP = 1;
+
+      pKick(30,0);
+    } 
+
+    if (moveTimePassed(14085)){
+      kP = 1;
+
+      pKick(40,0);
+    } 
+
+    if (moveTimePassed(14390)){
+      kP = 1;
+
+      pKick(50,0);
+    } 
+
+    if (moveTimePassed(14650)){
+      kP = 1;
+
+      pKick(65,0);
+    } 
+
+    if (moveTimePassed(14960)){
+      kP = 1.2;
+
+      pKick(90,0);
+    } 
+
+    // stand
+
+    if (moveTimePassed(14960)){
+      kP = 0.4;
+
+      pStand();
+    } 
+
+    if (moveTimePassed(19460)){
+      kP = 1.2;
+
+      pStand();
+    } 
+
+    // bows
+
+    if (moveTimePassed(23188)){
+      kP = 0.6;
+
+      pBow(80);
+    } 
+
+    if (moveTimePassed(24741)){
+      kP = 1.0;
+
+      pStand();
+    } 
+
+    // walk
+
+    if (moveTimePassed(28740)){
+      kP = 1.6;
+      pStep(15, 1);
+    } 
+    if (moveTimePassed(29245)){
+      kP = 1.5;
+      pStep(15, 0);
+    } 
+    if (moveTimePassed(29995)){
+      kP = 1.5;
+      pStep(15, 1);
+    } 
+    if (moveTimePassed(30680)){
+      kP = 1.7;
+      pStand();
+    } 
+
+    if (moveTimePassed(32190)){
+      kP = 0.6;
+
+      pBow(80);
+    } 
+
+    if (moveTimePassed(33765)){
+      kP = 1.2;
+
+      pStand();
+    } 
+
+    // mini bow
+
+    if (moveTimePassed(35975)){
+      kP = 0.8;
+
+      pBow(10);
+    } 
+
+    if (moveTimePassed(37870)){
+      kP = 0.8;
+
+      pBow(1);
+    } 
+
+    // hug
+
+    if (moveTimePassed(37870)){
+      kP = 2;
+
+      pBow(20);
+    } 
+
+    if (moveTimePassed(37870)){
+      kP = 1;
+
+      pStand();
+    } 
+
+    // walk
+
+    if (moveTimePassed(49526)){
+      kP = 1.5;
+      pStep(15, 1);
+    } 
+    if (moveTimePassed(50250)){
+      kP = 1.5;
+      pStep(15, 0);
+    } 
+    if (moveTimePassed(51025)){
+      kP = 1.5;
+      pStep(15, 1);
+    } 
+    if (moveTimePassed(51740)){
+      kP = 1.5;
+      pStep(15, 0);
+    } 
+    if (moveTimePassed(52515)){
+      kP = 1.5;
+      pStep(15, 1);
+    } 
+    if (moveTimePassed(53245)){
+      kP = 1.5;
+      pStep(15, 0);
+    } 
+    if (moveTimePassed(53960)){
+      kP = 1.5;
+      pStep(15, 1);
+    } 
+    if (moveTimePassed(54690)){
+      kP = 1.5;
+      pStand();
+    } 
+
+
+    if (moveTimePassed(60000)){
+        startMove(musicSequence8);
+    }
+
+  }
+
+  // --------------------------------
+  // MARK: - MUSIC SEQUENCE 8 toilet
+
+  if (move == musicSequence8){
+    
+    kP = 1.2;
+    pStand();
+
+    if (moveTimePassed(8090)){
+      kP = 1.5;
+      pKick(80,1);
+    } 
+    if (moveTimePassed(8790)){
+      kP = 1.5;
+      pKick(80,0);
+    } 
+    if (moveTimePassed(9480)){
+      kP = 1.5;
+      pBow(80);
+    } 
+
+    if (moveTimePassed(10320)){
+      kP = 0.2;
+      pStand();
+    } 
+
+
+    // splits
+
+    if (moveTimePassed(17500)){
+      kP = 2;
+      pStep(80,1);
+    } 
+    if (moveTimePassed(18400)){
+      kP = 2;
+      pStep(80,0);
+    } 
+    if (moveTimePassed(19300)){
+      kP = 2;
+      pStep(90,1);
+    } 
+    if (moveTimePassed(20200)){
+      kP = 2;
+      pStep(90,0);
+    } 
+
+    // forward backward
+
+    if (moveTimePassed(21475)){
+      kP = 2;
+      pBow(80);
+    } 
+    if (moveTimePassed(22200)){
+      kP = 2;
+      pBow(-80);
+    } 
+
+    if (moveTimePassed(22600)){
+      kP = 2;
+      pBow(90);
+    } 
+    if (moveTimePassed(23455)){
+      kP = 2;
+      pBow(-80);
+    } 
+    if (moveTimePassed(23725)){
+      kP = 2;
+      pBow(90);
+    } 
+
+    if (moveTimePassed(24900)){
+      kP = 0.3;
+      pStand();
+    } 
+
+  }
+
 }
+
+
+
 
 bool moveTimePassed(uint32_t time){
   if ((moveTimer + time) > millis()){
