@@ -602,6 +602,7 @@ void updateEncoder()
   {
     encoderUp = false;
   }
+  // encoderUp = newPos > encoderPos;
 
   if (newPos < encoderPos)
   {
@@ -2399,12 +2400,12 @@ void updateMoves(){
     }
 
     if (moveTimePassed(32120)){
-      kP = 1;
+      kP = 1.5;
       pBow(-20);
     }
 
     if (moveTimePassed(35436)){
-      kP = 1;
+      kP = 1.2;
       pStand();
     }
 
@@ -2474,27 +2475,39 @@ void updateMoves(){
     // starts going into headstand split
 
     if (moveTimePassed(1925)){
-      kP = 0.6;
+      kP = 1.2;
       lTargetPositionDegrees = 150;
       rTargetPositionDegrees = 90;
     }
 
     if (moveTimePassed(3600)){
-      kP = 0.6;
-      lTargetPositionDegrees = 275;
+      kP = 0.8;
+      lTargetPositionDegrees = 190;
       rTargetPositionDegrees = 90;
     }
 
     if (moveTimePassed(3900)){
       kP = 0.8;
-      lTargetPositionDegrees = 275;
+      lTargetPositionDegrees = 230;
+      rTargetPositionDegrees = 90;
+    }
+
+    if (moveTimePassed(4400)){
+      kP = 1;
+      lTargetPositionDegrees = 260;
+      rTargetPositionDegrees = 90;
+    }
+
+    if (moveTimePassed(4700)){
+      kP = 1.2;
+      lTargetPositionDegrees = 270;
       rTargetPositionDegrees = 90;
     }
 
     
 
     if (moveTimePassed(10335)){
-      kP = 1;
+      kP = 1.3;
       lTargetPositionDegrees = 267;
       rTargetPositionDegrees = 120;
     }
@@ -2512,18 +2525,18 @@ void updateMoves(){
     }
 
     if (moveTimePassed(16432)){
-      kP = 0.4;
+      kP = 1;
       pStand();
     }
     if (moveTimePassed(17255)){
-      kP = 1.2;
+      kP = 1.6;
       pStand();
     }
 
     // fall
 
     if (moveTimePassed(19309)){
-      kP = 0.6;
+      kP = 1.6;
       pBow(-10);
     } 
     if (moveTimePassed(21050)){
@@ -2633,14 +2646,14 @@ void updateMoves(){
 
     if (moveTimePassed(55485)){
       kP = 1.2;
-      pKick(30, 1);
+      pKick(50, 1);
     } 
 
     if (moveTimePassed(57240)){
       kP = 1.2;
 
       lTargetPositionDegrees = 185;
-      rTargetPositionDegrees = 160;
+      rTargetPositionDegrees = 130;
     } 
     if (moveTimePassed(59400)){
       kP = 1.2;
@@ -2664,22 +2677,22 @@ void updateMoves(){
 
       pBow(20);
     
-    if (moveTimePassed(1765)){
-      kP = 1;
+    // if (moveTimePassed(1765)){
+    //   kP = 1.3;
 
-      lTargetPositionDegrees = 100;
-      rTargetPositionDegrees = 160;
-    } 
+    //   lTargetPositionDegrees = 100;
+    //   rTargetPositionDegrees = 160;
+    // } 
 
-    if (moveTimePassed(6360)){
-      kP = 1.6;
+    // if (moveTimePassed(2360)){
+    //   kP = 1.6;
 
-      lTargetPositionDegrees = 110;
-      rTargetPositionDegrees = 170;
-    } 
+    //   lTargetPositionDegrees = 110;
+    //   rTargetPositionDegrees = 170;
+    // } 
 
-    if (moveTimePassed(7435)){
-      kP = 1.2;
+    if (moveTimePassed(3435)){
+      kP = 1.3;
 
       pStand();
     } 
@@ -2687,48 +2700,48 @@ void updateMoves(){
     if (moveTimePassed(13204)){
       kP = 1;
 
-      pKick(10,0);
+      pKick(10,1);
     } 
 
     if (moveTimePassed(13510)){
       kP = 1;
 
-      pKick(20,0);
+      pKick(20,1);
     } 
 
     if (moveTimePassed(13800)){
       kP = 1;
 
-      pKick(30,0);
+      pKick(30,1);
     } 
 
     if (moveTimePassed(14085)){
       kP = 1;
 
-      pKick(40,0);
+      pKick(40,1);
     } 
 
     if (moveTimePassed(14390)){
-      kP = 1;
+      kP = 1.2;
 
-      pKick(50,0);
+      pKick(50,1);
     } 
 
     if (moveTimePassed(14650)){
-      kP = 1;
+      kP = 1.4;
 
-      pKick(65,0);
+      pKick(75,1);
     } 
 
-    if (moveTimePassed(14960)){
-      kP = 1.2;
+    if (moveTimePassed(14860)){
+      kP = 2.2;
 
-      pKick(90,0);
+      pKick(90,1);
     } 
 
     // stand
 
-    if (moveTimePassed(14960)){
+    if (moveTimePassed(16426)){
       kP = 0.4;
 
       pStand();
@@ -2780,34 +2793,34 @@ void updateMoves(){
     } 
 
     if (moveTimePassed(33765)){
-      kP = 1.2;
+      kP = 1.5;
 
       pStand();
     } 
 
     // mini bow
 
-    if (moveTimePassed(35975)){
+    if (moveTimePassed(36975)){
       kP = 0.8;
 
       pBow(10);
     } 
 
-    if (moveTimePassed(37870)){
-      kP = 0.8;
+    if (moveTimePassed(38170)){
+      kP = 1.2;
 
       pBow(1);
     } 
 
     // hug
 
-    if (moveTimePassed(37870)){
+    if (moveTimePassed(41885)){
       kP = 2;
 
       pBow(20);
     } 
 
-    if (moveTimePassed(37870)){
+    if (moveTimePassed(44625)){
       kP = 1;
 
       pStand();
@@ -2817,31 +2830,31 @@ void updateMoves(){
 
     if (moveTimePassed(49526)){
       kP = 1.5;
-      pStep(15, 1);
+      pStep(17, 1);
     } 
     if (moveTimePassed(50250)){
       kP = 1.5;
-      pStep(15, 0);
+      pStep(17, 0);
     } 
     if (moveTimePassed(51025)){
       kP = 1.5;
-      pStep(15, 1);
+      pStep(17, 1);
     } 
     if (moveTimePassed(51740)){
       kP = 1.5;
-      pStep(15, 0);
+      pStep(17, 0);
     } 
     if (moveTimePassed(52515)){
       kP = 1.5;
-      pStep(15, 1);
+      pStep(17, 1);
     } 
     if (moveTimePassed(53245)){
       kP = 1.5;
-      pStep(15, 0);
+      pStep(17, 0);
     } 
     if (moveTimePassed(53960)){
       kP = 1.5;
-      pStep(15, 1);
+      pStep(17, 1);
     } 
     if (moveTimePassed(54690)){
       kP = 1.5;
@@ -2885,43 +2898,43 @@ void updateMoves(){
     // splits
 
     if (moveTimePassed(17500)){
-      kP = 2;
+      kP = 1.6;
       pStep(80,1);
     } 
     if (moveTimePassed(18400)){
-      kP = 2;
+      kP = 1.6;
       pStep(80,0);
     } 
     if (moveTimePassed(19300)){
-      kP = 2;
+      kP = 1.6;
       pStep(90,1);
     } 
     if (moveTimePassed(20200)){
-      kP = 2;
+      kP = 1.6;
       pStep(90,0);
     } 
 
     // forward backward
 
     if (moveTimePassed(21475)){
-      kP = 2;
+      kP = 1.4;
       pBow(80);
     } 
     if (moveTimePassed(22200)){
-      kP = 2;
+      kP = 1.4;
       pBow(-80);
     } 
 
     if (moveTimePassed(22600)){
-      kP = 2;
+      kP = 1.4;
       pBow(90);
     } 
     if (moveTimePassed(23455)){
-      kP = 2;
+      kP = 1.4;
       pBow(-80);
     } 
     if (moveTimePassed(23725)){
-      kP = 2;
+      kP = 1.4;
       pBow(90);
     } 
 
