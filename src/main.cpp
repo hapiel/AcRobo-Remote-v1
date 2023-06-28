@@ -18,6 +18,8 @@ TODO: The LCD is updated by the Acrobot
 #include <WiFi.h>
 #include <esp_now.h>
 
+#include <sequence.h>
+
 #define BATTERY_V 35
 #define LOW_POWER_SW 18
 
