@@ -222,6 +222,10 @@ enum moveList{
   acroyogaSequence,
   jump,
   flip,
+  sit,
+  backflip,
+  pitch180,
+  headBalanceSplit,
   musicSequence0,
   musicSequence1,
   musicSequence2,
@@ -244,8 +248,8 @@ bool moveTimePassed(u32_t time);
 
 // POSITIONS
 
-uint16_t forwardLimit = 90;
-uint16_t backwardLimit = 270;
+uint16_t forwardLimit = 80;
+uint16_t backwardLimit = 280;
 
 uint16_t withinLimits(uint16_t position);
 void pBow(int16_t upperBodyDegrees = 45);
@@ -777,8 +781,9 @@ void checkButtons(){
     }
 
     if (keyInput == 'C'){
-      move = musicSequence6;
-      moveTimer = millis() - 51000;
+      startMove(sit);
+      // move = musicSequence6;
+      // moveTimer = millis() - 51000;
     }
 
     if (keyInput == '*'){
@@ -786,17 +791,16 @@ void checkButtons(){
     }
 
     if (keyInput == '0'){
-      startMove(musicSequence1);
+      startMove(pitch180);
     }
 
     if (keyInput == '#'){
-      startMove(musicSequence2);
+      startMove(headBalanceSplit);
     }
 
-    if (keyInput == 'A'){
-      startMove(textSequence0);
+    if (keyInput == 'D'){
+      startMove(backflip);
     }
-
 
     updateMoves();
     prepareData();
@@ -1061,6 +1065,11 @@ void updateMoves(){
     kP = 0;
   }
 
+  if (move == sit){
+    kP = 0.8;
+    pBow(90);
+  }
+
   if (move == stop){
     kP = 2;
     lTargetPositionDegrees = dataIn.lInput;
@@ -1169,6 +1178,222 @@ void updateMoves(){
       kP = 1.8;
       pStand();
     }
+  }
+
+  if (move == backflip){
+
+    kP = 1.6;
+    pStand();
+
+    uint32_t moveTime = 0;
+
+    // prep position
+    if (moveTimePassed(moveTime += 7000)){
+      kP = 1.8;
+      pBow(15);
+    }
+
+    // tempo
+
+    if (moveTimePassed(moveTime += 3000)){
+      kP = 1.8;
+      pBow(5);
+    }
+    if (moveTimePassed(moveTime += 800)){
+      kP = 1.8;
+      pBow(20);
+    }
+    if (moveTimePassed(moveTime += 800)){
+      kP = 2.6;
+      pBow(-20);
+      // further bow back!?
+    }
+
+    // tuck
+
+    if (moveTimePassed(moveTime += 400)){
+      kP = 2.2;
+      pBow(85);
+    }
+
+    if (moveTimePassed(moveTime += 650)){
+      kP = 1.8;
+      pStand();
+    }
+
+    // BOW ON LANDING???! to fix backwards motion
+
+  }
+
+  if (move == pitch180){
+
+    kP = 1.6;
+    pStand();
+
+    uint32_t moveTime = 0;
+
+    // prep position
+    if (moveTimePassed(moveTime += 5000)){
+      kP = 1.6;
+      pKick(80, 1);
+    }
+
+    // tempo
+
+    if (moveTimePassed(moveTime += 2000)){
+      kP = 2.5;
+      pKick(100, 1);
+    }
+    if (moveTimePassed(moveTime += 800)){
+      kP = 1.8;
+      pKick(90, 1);
+    }
+    if (moveTimePassed(moveTime += 800)){
+      kP = 2;
+      pKick(10, 1);
+    }
+
+    if (moveTimePassed(moveTime += 300)){
+      kP = 2;
+      pStand();
+    }
+
+    if (moveTimePassed(moveTime += 900)){
+      kP = 0.8;
+      pKick(90, 0);
+    }
+
+    if (moveTimePassed(moveTime += 400)){
+      kP = 1.6;
+      pKick(90, 0);
+    }
+
+    if (moveTimePassed(moveTime += 3000)){
+      kP = 0.4;
+      pStand();
+    }
+
+    if (moveTimePassed(moveTime += 1000)){
+      kP = 2;
+      pBow(8);
+    }
+
+  }
+
+  if (move == headBalanceSplit){
+
+    
+    kP = 1.6;
+    pStand();
+
+    uint32_t moveTime = 0;
+
+    // start move
+    if (moveTimePassed(moveTime += 9000)){
+      kP = 1;
+      pStep(5, 1);
+    }
+
+    if (moveTimePassed(moveTime += 400)){
+      kP = 1;
+      pStep(11, 1);
+    }
+
+    if (moveTimePassed(moveTime += 400)){
+      kP = 1;
+      pStep(18, 1);
+    }
+
+    if (moveTimePassed(moveTime += 400)){
+      kP = 1;
+      pStep(26, 1);
+    }
+
+    if (moveTimePassed(moveTime += 400)){
+      kP = 1;
+      pStep(37, 1);
+    }
+
+    if (moveTimePassed(moveTime += 400)){
+      kP = 1;
+      pStep(47, 1);
+    }
+
+    if (moveTimePassed(moveTime += 400)){
+      kP = 1;
+      pStep(58, 1);
+    }
+
+    if (moveTimePassed(moveTime += 400)){
+      kP = 1.2;
+      pStep(67, 1);
+    }
+
+    if (moveTimePassed(moveTime += 400)){
+      kP = 1.3;
+      pStep(75, 1);
+    }
+
+    if (moveTimePassed(moveTime += 400)){
+      kP = 1.4;
+      pStep(82, 1);
+    }
+
+    if (moveTimePassed(moveTime += 400)){
+      kP = 1.5;
+      pStep(88, 1);
+    }
+
+    if (moveTimePassed(moveTime += 400)){
+      kP = 1.5;
+      pStep(90, 1);
+    }
+
+    if (moveTimePassed(moveTime += 5000)){
+      kP = 1.5;
+      pStep(80, 1);
+    }
+
+    if (moveTimePassed(moveTime += 500)){
+      kP = 1.3;
+      pStep(70, 1);
+    }
+    
+    if (moveTimePassed(moveTime += 500)){
+      kP = 1.1;
+      pStep(60, 1);
+    }
+
+        if (moveTimePassed(moveTime += 500)){
+      kP = 1.1;
+      pStep(50, 1);
+    }
+
+    if (moveTimePassed(moveTime += 500)){
+      kP = 1.1;
+      pStep(40, 1);
+    }
+
+    if (moveTimePassed(moveTime += 500)){
+      kP = 1.1;
+      pStep(30, 1);
+    }
+
+    if (moveTimePassed(moveTime += 500)){
+      kP = 1.1;
+      pStep(20, 1);
+    }
+
+    if (moveTimePassed(moveTime += 500)){
+      kP = 1.1;
+      pStep(10, 1);
+    }
+
+    if (moveTimePassed(moveTime += 500)){
+      kP = 1.8;
+      pStand();
+    }
+
   }
 
   if (move == acroyogaSequence){
@@ -1633,7 +1858,6 @@ void updateMoves(){
       kP = 1;
       pStand();
     }
-
 
     // raise leg, walk.
 
@@ -2973,7 +3197,7 @@ void pBow(int16_t upperBodyDegrees){
 }
 
 void pStand(){
-  pBow(0);
+  pBow(4);
 }
 
 void pStep(int8_t degrees, bool rightFront){
