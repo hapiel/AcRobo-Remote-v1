@@ -40,6 +40,11 @@ TODO: The LCD is updated by the Acrobot
 
 #define I2CMATRIX 0x38
 
+// NEW BIT FOR SEQUENCING
+
+Sequence sequence = Sequence();
+
+
 // ---------------
 // MARK: - FORWARD DECLARATIONS in order of document
 
@@ -344,6 +349,11 @@ void loop()
   updateLCD();
   updateLED();
   readADS();
+
+  sequence.update();
+  kP = sequence.getKP();
+  lTargetPositionDegrees = sequence.getLPos();
+  rTargetPositionDegrees = sequence.getRPos();
 
   
   // in slider mode, send continuously.
@@ -759,7 +769,8 @@ void checkButtons(){
     }
 
     if (keyInput == '5'){
-      startMove(stop);
+      // startMove(stop);
+      sequence.startSequence(&Sequence::threeJumpSequence);
     }
 
     if (keyInput == '6'){
@@ -804,7 +815,7 @@ void checkButtons(){
       startMove(backflip);
     }
 
-    updateMoves();
+    // updateMoves();
     prepareData();
     sendData();
   }

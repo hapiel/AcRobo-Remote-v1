@@ -8,28 +8,81 @@ Sequence::Sequence()
 
 void Sequence::update()
 {
-  // update timer
-  // check for new moves to execute
-  // execute within limits
+
+  if (currentSequence != nullptr)
+    (this->*currentSequence)();
+
+  if (currentMove != nullptr)
+    (this->*currentMove)();
+
 }
 
-void Sequence::testSequence()
+void Sequence::threeJumpSequence()
 {
-  setCurrentMoveStartTime(); 
-  moveJump(); // How to make sure moveJump gets called in every update() for the duration of the move?
 
+  if (moveCounter == 0){
+    startMove(&Sequence::moveJump);
+  }
+  
+  // how to ensure a move is "finished"? 
+  // I can't make another timer or a flag, because there is a risk that I might forget to
+  // include that at the end of a move... 
 
+  // should start 2 seconds after jump
+  if (sequenceTimePassed(8000) && moveCounter == 1){
+    startMove(&Sequence::moveJump);
+  }
+
+  // should also start after 2 seconds
+  if (sequenceTimePassed(9000) && moveTimePassed(8000) && moveCounter == 2){
+    
+    startMove(&Sequence::moveJump);
+  }
+
+  // should also start after 2 seconds
+  if (sequenceTimePassed(24000)  && moveCounter == 3){
+    
+    startMove(&Sequence::moveStand); // cant use poseStand because it has arguments.
+  }
   
 }
 
-void Sequence::setLastMoveEndTime()
-{
-  lastMoveEndTime = millis(); 
+void Sequence::startMove(void (Sequence::*move)()) {
+  currentMove = move;
+  currentMoveStartTime = millis();
+  moveCounter ++;
 }
 
-void Sequence::setCurrentMoveStartTime()
+void Sequence::startSequence(void (Sequence::*move)()) {
+  currentSequence = move;
+  currentSequenceStartTime = millis();
+  moveCounter = 0;
+}
+
+
+void Sequence::moveJump()
 {
-  currentMoveStartTime = millis(); 
+  poseStand();
+
+  if (moveTimePassed(2000)){
+    poseBow(45, 0.6);
+  }
+
+  if (moveTimePassed(3000)){
+    poseBow(-10, 4);
+  }
+
+  if (moveTimePassed(3800)){
+    poseBow(10, 2);
+  }
+  if (moveTimePassed(6000)){
+    poseStand();
+  }
+}
+
+void Sequence::moveStand()
+{
+  poseStand(2);
 }
 
 
@@ -48,11 +101,16 @@ uint16_t Sequence::getRPos(){
   return withinLimits(angleRight);
 }
 
+double Sequence::getKP(){
+  return _kP;
+}
+
 
 void Sequence::poseStand(double _kP)
 {
   poseBow(3, _kP);
 }
+
 void Sequence::poseBow(int16_t angle, double _kP)
 {
   this->_kP = _kP;
@@ -98,26 +156,13 @@ bool Sequence::moveTimePassed(uint32_t time){
 
 }
 
-void Sequence::moveJump()
-{
-  poseStand();
-
-  if (moveTimePassed(2000)){
-    poseBow(45, 0.6);
+bool Sequence::sequenceTimePassed(uint32_t time){
+  if ((currentSequenceStartTime + time) > millis()){
+    return false;
   }
-
-  if (moveTimePassed(3000)){
-    poseBow(-10, 4);
-  }
-
-  if (moveTimePassed(3800)){
-    poseBow(10, 2);
-  }
-  if (moveTimePassed(6000)){
-    poseStand();
-    setLastMoveEndTime();
-  }
+  return true;
 }
+
 
 
 
