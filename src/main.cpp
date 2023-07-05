@@ -18,8 +18,6 @@ TODO: The LCD is updated by the Acrobot
 #include <WiFi.h>
 #include <esp_now.h>
 
-#include <sequence.h>
-
 #define BATTERY_V 35
 #define LOW_POWER_SW 18
 
@@ -40,9 +38,60 @@ TODO: The LCD is updated by the Acrobot
 
 #define I2CMATRIX 0x38
 
-// NEW BIT FOR SEQUENCING
+// MARK: Movement new
 
-Sequence sequence = Sequence();
+uint32_t choreoTimer;
+uint16_t choreoStepCounter;
+
+bool choreoTimePassed(uint32_t time){
+  return (choreoTimer + time) <= millis();
+}
+
+
+struct ChoreographyStep{
+  uint32_t time;
+  void (*move)();
+};
+
+ChoreographyStep myChoreo[] = {
+  {1000, [](){ kP = 0.6; pStep(90,1);}},
+  {2000, myMove },
+  {4000, moveWalk },
+};
+
+
+// MOVES
+void myMove(){
+  kP = 0.6;
+  pKick(90,1);
+}
+
+void moveWalk (){
+  kP = 1.4;
+  pStep(20, 1);
+
+  // wait 800
+  if (choreoTimePassed(currentChoreo[choreoStepCounter].time + 800)){
+      pStep(20, 0);
+  }
+}
+
+ChoreographyStep* currentChoreo = myChoreo; 
+
+// call once to set timer
+void startChoreo(ChoreographyStep choreo[]){
+  currentChoreo = choreo; 
+  choreoTimer = millis();
+  choreoStepCounter = 0;
+}
+
+// run this in the loop
+void playCurrentChoreo(){
+  if (choreoTimePassed(currentChoreo[choreoStepCounter].time)){
+    choreoStepCounter ++;
+  }
+  currentChoreo[choreoStepCounter].move();
+}
 
 
 // ---------------
@@ -349,11 +398,6 @@ void loop()
   updateLCD();
   updateLED();
   readADS();
-
-  sequence.update();
-  kP = sequence.getKP();
-  lTargetPositionDegrees = sequence.getLPos();
-  rTargetPositionDegrees = sequence.getRPos();
 
   
   // in slider mode, send continuously.
@@ -769,8 +813,7 @@ void checkButtons(){
     }
 
     if (keyInput == '5'){
-      // startMove(stop);
-      sequence.startSequence(&Sequence::threeJumpSequence);
+      startMove(stop);
     }
 
     if (keyInput == '6'){
@@ -815,7 +858,7 @@ void checkButtons(){
       startMove(backflip);
     }
 
-    // updateMoves();
+    updateMoves();
     prepareData();
     sendData();
   }
