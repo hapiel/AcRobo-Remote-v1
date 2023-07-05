@@ -38,60 +38,6 @@ TODO: The LCD is updated by the Acrobot
 
 #define I2CMATRIX 0x38
 
-// MARK: Movement new
-
-uint32_t choreoTimer;
-uint16_t choreoStepCounter;
-
-bool choreoTimePassed(uint32_t time){
-  return (choreoTimer + time) <= millis();
-}
-
-
-struct ChoreographyStep{
-  uint32_t time;
-  void (*move)();
-};
-
-ChoreographyStep myChoreo[] = {
-  {1000, [](){ kP = 0.6; pStep(90,1);}},
-  {2000, myMove },
-  {4000, moveWalk },
-};
-
-
-// MOVES
-void myMove(){
-  kP = 0.6;
-  pKick(90,1);
-}
-
-void moveWalk (){
-  kP = 1.4;
-  pStep(20, 1);
-
-  // wait 800
-  if (choreoTimePassed(currentChoreo[choreoStepCounter].time + 800)){
-      pStep(20, 0);
-  }
-}
-
-ChoreographyStep* currentChoreo = myChoreo; 
-
-// call once to set timer
-void startChoreo(ChoreographyStep choreo[]){
-  currentChoreo = choreo; 
-  choreoTimer = millis();
-  choreoStepCounter = 0;
-}
-
-// run this in the loop
-void playCurrentChoreo(){
-  if (choreoTimePassed(currentChoreo[choreoStepCounter].time)){
-    choreoStepCounter ++;
-  }
-  currentChoreo[choreoStepCounter].move();
-}
 
 
 // ---------------
@@ -323,10 +269,114 @@ void printAll();
 // END FORWARD DECLARATIONS
 // **********************************
 
+// MARK: Poses new
+
+void pStand(){
+  pBow(4);
+}
+
+void pStep(int8_t degrees, bool rightFront){
+  // for left, can also do negative value in degrees
+
+  int8_t sign = rightFront * 2 - 1;
+
+  rTargetPositionDegrees = withinLimits(180 + degrees * -sign);
+  lTargetPositionDegrees = withinLimits(180 + degrees * sign);
+}
+
+void pKick(int8_t degrees, bool rightFront){
+  
+  if (rightFront){
+    lTargetPositionDegrees = 180;
+    rTargetPositionDegrees = withinLimits(180 - degrees);
+  } else {
+    rTargetPositionDegrees = 180;
+    lTargetPositionDegrees = withinLimits(180 - degrees);
+  }
+
+}
+
+// MARK: Movement new
+
+uint32_t choreoTimer;
+uint16_t choreoStepCounter;
+
+// declarations:
+void myMove();
+void moveWalk();
+
+bool choreoTimePassed(uint32_t time){
+  return (choreoTimer + time) <= millis();
+}
+
+
+struct ChoreographyStep{
+  uint32_t time;
+  void (*move)();
+};
+
+ChoreographyStep* currentChoreo;
+
+ChoreographyStep myChoreo[] = {
+  {0, [](){ kP = 1.2; pStand();}},
+  {1000, [](){ kP = 0.6; pStep(90,1);}},
+  {2000, myMove },
+  {4000, moveWalk },
+};
+
+ChoreographyStep mySecondChoreo[] = {
+  {0, [](){ kP = 1.2; pStand();}},
+  {1000, [](){ kP = 0.6; pStep(90,1);}},
+  {4000, moveWalk },
+  {6000, moveWalk },
+  {8000, moveWalk },
+  {10000, moveWalk },
+};
+
+
+// MOVES
+void myMove(){
+  kP = 0.6;
+  pKick(90,1);
+}
+
+void moveWalk (){
+  kP = 1.4;
+  pStep(20, 1);
+
+  // wait 800
+  if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + 800)){
+    pStep(20, 0);
+  }
+}
+
+
+
+// call once to set timer
+void startChoreo(ChoreographyStep choreo[]){
+  currentChoreo = choreo; 
+  choreoTimer = millis();
+  choreoStepCounter = 0;
+}
+
+// run this in the loop
+void playCurrentChoreo(){
+  if (choreoTimePassed(currentChoreo[choreoStepCounter].time)){
+    if (choreoStepCounter < sizeof(currentChoreo)-1 ){
+      choreoStepCounter ++;
+    }
+    
+  }
+  currentChoreo[choreoStepCounter].move();
+}
+
+
+
 // MARK: -Setup
 
 void setup()
 {
+  currentChoreo = myChoreo; 
 
   pinMode(LED_R, OUTPUT);
   pinMode(LED_G, OUTPUT);
@@ -400,6 +450,8 @@ void loop()
   readADS();
 
   
+  playCurrentChoreo();
+
   // in slider mode, send continuously.
   // if (lcdSlider){
     
@@ -813,7 +865,7 @@ void checkButtons(){
     }
 
     if (keyInput == '5'){
-      startMove(stop);
+      startChoreo(mySecondChoreo);
     }
 
     if (keyInput == '6'){
@@ -858,7 +910,7 @@ void checkButtons(){
       startMove(backflip);
     }
 
-    updateMoves();
+    // updateMoves(); // OLD SYSTEM
     prepareData();
     sendData();
   }
@@ -3252,30 +3304,11 @@ void pBow(int16_t upperBodyDegrees){
   lTargetPositionDegrees = withinLimits(180 - upperBodyDegrees);
 }
 
-void pStand(){
-  pBow(4);
-}
 
-void pStep(int8_t degrees, bool rightFront){
-  // for left, can also do negative value in degrees
 
-  int8_t sign = rightFront * 2 - 1;
 
-  rTargetPositionDegrees = withinLimits(180 + degrees * -sign);
-  lTargetPositionDegrees = withinLimits(180 + degrees * sign);
-}
 
-void pKick(int8_t degrees, bool rightFront){
-  
-  if (rightFront){
-    lTargetPositionDegrees = 180;
-    rTargetPositionDegrees = withinLimits(180 - degrees);
-  } else {
-    rTargetPositionDegrees = 180;
-    lTargetPositionDegrees = withinLimits(180 - degrees);
-  }
 
-}
 
 // --------------
 // MARK: - Print
