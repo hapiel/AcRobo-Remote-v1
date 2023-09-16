@@ -3122,35 +3122,35 @@ void updateMoves(){
     // splits
 
     if (moveTimePassed(17500)){
-      kP = 1.6;
+      kP = 1.2;
       pStep(80,1);
     } 
     if (moveTimePassed(18400)){
-      kP = 1.6;
+      kP = 1.2;
       pStep(80,0);
     } 
     if (moveTimePassed(19300)){
-      kP = 1.6;
+      kP = 1.2;
       pStep(90,1);
     } 
     if (moveTimePassed(20200)){
-      kP = 1.6;
+      kP = 1.2;
       pStep(90,0);
     } 
 
     // forward backward
 
     if (moveTimePassed(21475)){
-      kP = 1.4;
+      kP = 1.0;
       pBow(80);
     } 
     if (moveTimePassed(22200)){
-      kP = 1.4;
+      kP = 1.0;
       pBow(-80);
     } 
 
     if (moveTimePassed(22600)){
-      kP = 1.4;
+      kP = 1.0;
       pBow(90);
     } 
     if (moveTimePassed(23455)){
@@ -3158,7 +3158,7 @@ void updateMoves(){
       pBow(-80);
     } 
     if (moveTimePassed(23725)){
-      kP = 1.4;
+      kP = 1.0;
       pBow(90);
     } 
 
