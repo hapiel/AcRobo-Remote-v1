@@ -257,7 +257,12 @@ uint16_t withinLimits(uint16_t position);
 void pBow(int16_t upperBodyDegrees = 45);
 void pStand();
 void pStep(int8_t degrees = 20, bool rightFront = true);
+void pStepRight(int8_t degrees = 20);
+void pStepLeft(int8_t degrees = 20);
 void pKick(int8_t degrees = 90, bool rightFront = true);
+void pKickRight(int8_t degrees = 90);
+void pKickLeft(int8_t degrees = 90);
+void pSpecial(int16_t degreesL, int16_t degreesR);
 
 
 
@@ -269,10 +274,10 @@ void printAll();
 // END FORWARD DECLARATIONS
 // **********************************
 
-// MARK: Poses new
+// MARK: - Poses new
 
 void pStand(){
-  pBow(4);
+  pBow(2);
 }
 
 void pStep(int8_t degrees, bool rightFront){
@@ -282,6 +287,14 @@ void pStep(int8_t degrees, bool rightFront){
 
   rTargetPositionDegrees = withinLimits(180 + degrees * -sign);
   lTargetPositionDegrees = withinLimits(180 + degrees * sign);
+}
+
+void pStepRight(int8_t degrees){
+  pStep(degrees, 1);
+}
+
+void pStepLeft(int8_t degrees){
+  pStep(degrees, 0);
 }
 
 void pKick(int8_t degrees, bool rightFront){
@@ -296,14 +309,47 @@ void pKick(int8_t degrees, bool rightFront){
 
 }
 
-// MARK: Movement new
+void pSpecial(int16_t degreesL, int16_t degreesR){
+  lTargetPositionDegrees = withinLimits(180 - degreesL);
+  rTargetPositionDegrees = withinLimits(180 - degreesR);
+}
+
+void pKickRight(int8_t degrees){
+  
+  pKick(degrees, 1);
+
+}
+
+void pKickLeft(int8_t degrees){
+  
+  pKick(degrees, 0);
+
+}
+
+
+void pBow(int16_t upperBodyDegrees){
+  // -90 to 90
+  lTargetPositionDegrees = withinLimits(180 - upperBodyDegrees);
+  rTargetPositionDegrees = withinLimits(180 - upperBodyDegrees);
+}
+
+// MARK: - Movement new
 
 uint32_t choreoTimer;
-uint16_t choreoStepCounter;
+uint16_t choreoStepCounter = 0;
 
 // declarations:
 void myMove();
 void moveWalk();
+void moveWalkCont();
+void moveStand();
+void moveBreathe();
+void moveWalkSlow();
+void moveStepRight();
+void moveStepLeft();
+void moveWaveFront();
+void moveWaveBack();
+void moveBreatheSit();
 
 bool choreoTimePassed(uint32_t time){
   return (choreoTimer + time) <= millis();
@@ -322,6 +368,7 @@ ChoreographyStep myChoreo[] = {
   {1000, [](){ kP = 0.6; pStep(90,1);}},
   {2000, myMove },
   {4000, moveWalk },
+  {UINT32_MAX, nullptr}  // Sentinel value indicating the end of the array
 };
 
 ChoreographyStep mySecondChoreo[] = {
@@ -331,10 +378,317 @@ ChoreographyStep mySecondChoreo[] = {
   {6000, moveWalk },
   {8000, moveWalk },
   {10000, moveWalk },
+  {UINT32_MAX, nullptr}  // Sentinel value indicating the end of the array
+};
+
+ChoreographyStep testChoreo[] = {
+  {0, [](){ kP = 0.8; pStand();}},
+  {2000, moveWalkCont},
+  {10000, [](){ kP = 0.8; pStand();} },
+  {UINT32_MAX, nullptr}  // Sentinel value indicating the end of the array
+};
+
+ChoreographyStep standingChoreo[] = {
+  {0, moveStand},
+  {UINT32_MAX, nullptr}  // Sentinel value indicating the end of the array
+};
+
+ChoreographyStep breathingChoreo[] = {
+  {0, moveBreathe},
+  {UINT32_MAX, nullptr}  // Sentinel value indicating the end of the array
+};
+
+ChoreographyStep walkingChoreo[] = {
+  {0, moveWalkCont},
+  {UINT32_MAX, nullptr}  // Sentinel value indicating the end of the array
+};
+
+ChoreographyStep nodChoreo[] = {
+  {0, [](){ kP = 1.4; pBow(90);}},
+  {1000, [](){ kP = 1.4; pBow(75);}},
+  {2000, [](){ kP = 1.4; pBow(90);}},
+  {8000, moveStand},
+
+  {UINT32_MAX, nullptr}  // Sentinel value indicating the end of the array
+};
+
+ChoreographyStep mirrorChoreo[] = {
+  {0, moveBreathe},
+  {30000, [](){ kP = 0.8; pBow(15);}},
+  {31000, [](){ kP = 0.8; pBow(20);}},
+  {32000, [](){ kP = 0.8; pBow(25);}},
+  {33000, [](){ kP = 0.8; pBow(30);}},
+  {34000, [](){ kP = 0.8; pBow(38);}}, // fall into me
+  {37800, [](){ kP = 0.8; pBow(15);}},
+  {40000, [](){ kP = 1; pStand();}}, // back standing
+  {41000, moveBreathe}, 
+  {47000, [](){ kP = 1.4; pKickRight(50);}}, // step 1
+  {49500, [](){ kP = 0.8; pStepRight(20);}},
+  {50000, [](){ kP = 1.2; pStepRight(20);}},
+  {55000, [](){ kP = 0.9; pBow(-5);}}, // step 2
+  {56200, [](){ kP = 0.8; pStepLeft(20);}},
+  {57000, [](){ kP = 1.4; pStepLeft(20);}},
+  {60000, moveWalkSlow}, 
+  {80000, [](){ kP = 0.8; pStepRight(15);}},
+  {80500, [](){ kP = 1.4; pStepRight(15);}},
+  {84000, [](){ kP = 1.4; pStepLeft(20);}}, // sudden turn
+  {86000, [](){ kP = 0.8; pStepRight(20);}},
+  {86200, [](){ kP = 1.4; pStepRight(20);}},
+  {87000, [](){ kP = 0.8; pStepLeft(20);}},
+  {87200, [](){ kP = 1.4; pStepLeft(20);}},
+  {88300, moveWalkCont}, 
+
+  {120000, moveStand}, 
+  {125000, [](){ kP = 1.4; pKickRight(20);}}, // raise leg
+  {128000, [](){ kP = 1.4; pKickRight(30);}},
+  {131000, [](){ kP = 1.4; pKickRight(40);}},
+  {134000, [](){ kP = 1.4; pKickRight(50);}},
+  {137000, [](){ kP = 1.5; pKickRight(60);}},
+  {140000, [](){ kP = 1.6; pKickRight(70);}},
+  {143000, [](){ kP = 1.7; pSpecial(-7, 80);}},
+  {145000, [](){ kP = 1.8; pSpecial(-14, 90);}},
+  {150000, [](){ kP = 2; pSpecial(-21, 100);}},
+
+  {154000, moveStand}, 
+
+  {157000, [](){ kP = 0.8; pBow(45);}}, // situp challenge
+  {158000, [](){ kP = 1; pBow(90);}},
+
+  {168000, [](){ kP = 1.4; pBow(75);}},
+  {172000, [](){ kP = 1.4; pBow(65);}},
+  {176000, [](){ kP = 1.4; pBow(50);}},
+
+  {190000, moveStand}, 
+
+  // random sequence
+
+  {200000, [](){ kP = 1.1; pKickRight(80);}}, 
+  {201400, [](){ kP = 1.1; pStepRight(70);}}, 
+  {202200, [](){ kP = 1.1; pKickLeft(80);}}, 
+  {203100, [](){ kP = 1.1; pStepLeft(70);}}, 
+  {204000, [](){ kP = 1.1; pBow(45);}}, 
+  {206600, [](){ kP = 1.3; pBow(90);}}, 
+  {207000, [](){ kP = 1.1; pStand();}}, 
+  {209100, [](){ kP = 0.8; pKickRight(80);}}, 
+  {210500, [](){ kP = 1.1; pStepRight(70);}}, 
+  {212900, [](){ kP = 1.3; pBow(90);}}, 
+  {213200, [](){ kP = 1.1; pStand();}}, 
+  {214100, [](){ kP = 1.1; pStepLeft(70);}}, 
+  {216000, [](){ kP = 0.8; pKickLeft(80);}}, 
+  {217400, [](){ kP = 1.1; pStand();}}, 
+  {219000, [](){ kP = 1.1; pStepRight(70);}}, 
+  {220400, [](){ kP = 1.1; pBow(45);}}, 
+  {222100, [](){ kP = 0.8; pStand();}}, 
+  {222800, [](){ kP = 0.8; pBow(90);}}, 
+  {223100, [](){ kP = 1.1; pStepRight(70);}}, 
+  {223600, [](){ kP = 0.8; pKickLeft(80);}}, 
+  {224000, [](){ kP = 1.3; pBow(30);}}, 
+  {225000, [](){ kP = 1.1; pStand();}}, 
+  {224500, [](){ kP = 1.3; pBow(90);}}, 
+
+  {225000, moveBreatheSit},  // sitting lying on the floor
+
+  // add longer
+
+  {250000 + 6000, [](){ kP = 1.3; pBow(90);}}, 
+  {252000 + 6000, [](){ kP = 1.1; pBow(75);}}, 
+  {254000 + 6000, [](){ kP = 1.3; pBow(90);}}, 
+  {256000 + 6000, [](){ kP = 1.1; pBow(65);}}, 
+  {258000 + 6000, [](){ kP = 1.3; pBow(90);}}, 
+  {260000 + 6000, [](){ kP = 1.1; pBow(55);}}, 
+  {261500 + 6000, [](){ kP = 1.3; pBow(90);}}, 
+  {263000 + 6000, [](){ kP = 1.1; pBow(45);}}, 
+  {264500 + 6000, [](){ kP = 1.3; pBow(85);}}, 
+  {266000 + 6000, [](){ kP = 1.1; pBow(35);}}, 
+  {267500 + 6000, [](){ kP = 1.3; pBow(80);}}, 
+  {269000 + 6000, [](){ kP = 1.1; pBow(15);}}, 
+  {271500 + 6000, [](){ kP = 1.3; pBow(80);}}, 
+  {273000 + 6000, [](){ kP = 1.1; pBow(0);}}, 
+  {274500 + 6000, [](){ kP = 1.3; pBow(80);}}, 
+  {276000 + 6000, [](){ kP = 1.1; pBow(-15);}}, 
+  {277500 + 6000, [](){ kP = 1.3; pBow(80);}}, 
+  {278800 + 6000, [](){ kP = 1.1; pBow(-35);}}, 
+
+  {279000 + 7000, [](){ kP = 1.3; pBow(80);}}, 
+  {281200 + 7000, [](){ kP = 1.1; pBow(-65);}}, 
+  {282400 + 7000, [](){ kP = 1.3; pBow(80);}}, 
+  {283650 + 7000, [](){ kP = 1.1; pBow(-65);}}, 
+  {284800 + 7000, [](){ kP = 1.3; pBow(80);}}, 
+  {285900 + 7000, [](){ kP = 1.1; pBow(-65);}}, 
+  {287000 + 7000, [](){ kP = 1.3; pBow(80);}}, 
+  {288000 + 7000, [](){ kP = 1.1; pBow(-65);}}, 
+  {289000 + 7000, [](){ kP = 1.3; pBow(80);}}, 
+  {230000 + 7000, [](){ kP = 1.1; pBow(-65);}}, 
+  {231000 + 7000, [](){ kP = 1.3; pBow(80);}}, 
+  {232000 + 7000, [](){ kP = 1.1; pBow(-65);}}, 
+  {233000 + 7000, [](){ kP = 1.3; pBow(80);}}, 
+  {234000 + 7000, [](){ kP = 1.1; pBow(-65);}}, 
+  {235000 + 7000, [](){ kP = 1.3; pBow(80);}}, 
+  {236000 + 7000, [](){ kP = 1.1; pBow(-65);}}, 
+  {237000 + 7000, [](){ kP = 1.3; pBow(80);}}, 
+  {238000 + 7000, [](){ kP = 1.1; pBow(-65);}}, 
+  {239000 + 7000, [](){ kP = 1.3; pBow(80);}}, 
+  {240000 + 7000, [](){ kP = 1.1; pBow(-65);}}, 
+  {241000 + 7000, [](){ kP = 1.3; pBow(80);}}, 
+  {242000 + 7000, [](){ kP = 1.1; pBow(-65);}}, 
+  {243000 + 7000, [](){ kP = 1.3; pBow(80);}}, 
+
+// add more
+
+
+
+
+  {251500, [](){ kP = 1.0; pBow(-65);}}, 
+  {253000 + 7000, [](){ kP = 1.2; pBow(80);}}, 
+  {235000 + 7000, [](){ kP = 1.1; pBow(-65);}}, 
+  {238000 + 7000, [](){ kP = 1.2; pBow(75);}}, 
+
+
+  {UINT32_MAX, nullptr}  // end of the array
+};
+
+ChoreographyStep acroChoreo[] = {
+  {0, moveStand},
+
+  {8780, moveStepRight},
+  {9830, moveStepLeft},
+  {10865, moveStepRight},
+  {11870, moveStepLeft},
+
+  {12905, moveStand},
+  // bird
+  {16846, [](){ kP = 1.6; pBow(25);}},
+  {17846, [](){ kP = 1.2; pBow(15);}},
+  {18846, [](){ kP = 1.8; pBow(0);}},
+  // swimming
+  {20789, [](){ kP = 1.8; pStepRight(10);}},
+  {21310, [](){ kP = 1.8; pStepLeft(10);}},
+  {21805, [](){ kP = 1.8; pStepRight(10);}},
+  {22295, [](){ kP = 1.8; pStepLeft(10);}},
+  {22765, [](){ kP = 1.8; pStepRight(10);}},
+  {23245, [](){ kP = 1.8; pStepLeft(10);}},
+  {23720, [](){ kP = 1.8; pStepRight(10);}},
+  {24161, [](){ kP = 1.8; pBow(0);}},
+  // cloth hanger
+  {24640, [](){ kP = 0.3; pBow(75);}},
+
+  {25780, [](){ kP = 1.2; pKickRight(90);}},
+  {26743, [](){ kP = 0.8; pStepRight(70);}},
+  {28780, [](){ kP = 1.2; pStepRight(45);}},
+  {29866, [](){ kP = 1.2; pStepRight(20);}},
+  {30742, [](){ kP = 1.2; pStepRight(0);}},
+
+  {35663, [](){ kP = 0.5; pStepRight(70);}},
+
+  {38577, [](){ kP = 0.6; pBow(92);}},
+
+  {40898, [](){ kP = 1; pBow(75);}},
+  {41722, [](){ kP = 1.2; pBow(45);}},
+  {42715, [](){ kP = 1.2; pBow(5);}}, // staan in handen
+
+  {49945, [](){ kP = 1.4; pBow(15);}}, // richting vloer vanuit snoek
+  {54015, [](){ kP = 1.4; pStand();}},
+
+  {56965, moveStepLeft},
+  {58044, moveStepRight},
+  {59032, moveStepLeft},
+  {60054, moveStepRight},
+  {61173, moveStepLeft},
+
+  {62996, [](){ kP = 3; pSpecial(-10, 90);}}, // backflip
+  {63200, [](){ kP = 2; pStepRight(90);}},
+  {63900, [](){ kP = 1.5; pBow(20);}},
+  {64400, [](){ kP = 1.1; pStand();}},
+  {67135, [](){ kP = 0.5; pBow(45);}},
+  {69011, [](){ kP = 1.1; pStand();}},
+
+
+  {72702, [](){ kP = 0.8; pBow(15);}}, // schouder zit
+  {73247, [](){ kP = 0.8; pBow(30);}},
+  {74064, [](){ kP = 1; pBow(70);}},
+
+  {76422, [](){ kP = 0.8; pBow(50);}},
+  {77422, [](){ kP = 1; pBow(-20);}}, // uitbouw
+
+  {81301, [](){ kP = 1.2; pStand();}},
+
+  {83388, [](){ kP = 1.8; pKickRight(-14);}}, // opzwaai snoek
+  {84000, [](){ kP = 1.6; pKickRight(80);}},
+  {84300, [](){ kP = 1.4; pStepRight(90);}},
+  {85000, [](){ kP = 1.0; pBow(30);}},
+  {85500, [](){ kP = 1.0; pBow(-10);}},
+
+  {87301, [](){ kP = 1.0; pBow(50);}}, // kopstand
+  {88000, [](){ kP = 0.5; pSpecial(70,90);}},
+  {89300, [](){ kP = 1.0; pSpecial(30,90);}},
+  {90100, [](){ kP = 1.0; pSpecial(-10,90);}},
+  {91300, [](){ kP = 0.8; pSpecial(-50,90);}},
+  {91500, [](){ kP = 1.2; pSpecial(-80,90);}},
+
+  {95648, [](){ kP = 1.2; pStepRight(50);}},
+  {96339, [](){ kP = 0.8; pBow(60);}},
+  {96839, [](){ kP = 1.2; pBow(95);}},
+
+  {99535, [](){ kP = 1.2; pBow(70);}},
+  {100000, [](){ kP = 1.2; pBow(50);}},
+  {100800, [](){ kP = 1.2; pBow(20);}},
+
+  {101618, [](){ kP = 1.5; pStand();}}, // schouder staan
+
+  {104200, moveWaveFront}, // wave
+  {105880, moveWaveBack},
+  {107229, moveWaveFront},
+  {108743, moveWaveBack},
+  {110181, moveWaveFront},
+  {111998, moveWaveBack},
+  {113448, moveWaveFront},
+  {114975, moveWaveBack},
+  {116581, [](){ kP = 1.6; pStand();}},
+
+  {130280, [](){ kP = 1.8; pKickRight(90);}}, // finale pose
+
+
+
+  {135000, [](){ kP = 1.1; pStand();}},
+
+
+  {UINT32_MAX, nullptr}  // Sentinel value indicating the end of the array
 };
 
 
+
+
 // MOVES
+
+void moveWaveFront(){
+  kP = 0.8;
+  pBow(50);
+
+  if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + 200)){
+    kP = 1.2;
+    pBow(55);
+  }
+    if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + 500)){
+    kP = 1.4;
+    pBow(65);
+  }
+}
+
+void moveWaveBack(){
+  kP = 0.8;
+  pBow(-30);
+
+  if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + 200)){
+    kP = 1.2;
+    pBow(-45);
+  }
+    if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + 500)){
+    kP = 1.4;
+    pBow(-55);
+  }
+}
+
+
 void myMove(){
   kP = 0.6;
   pKick(90,1);
@@ -350,6 +704,139 @@ void moveWalk (){
   }
 }
 
+void moveWalkCont (){
+  int timeStep = 1800;
+  int miniStep = 200;
+
+  for(int i = 0; i < 100; i++){
+      // wait 800
+    if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + i * timeStep)){ // 2000 + 1 * (800 * 0.4)
+      kP = 0.8;
+      pStep(20, 1);
+    }
+    if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + i * timeStep + miniStep)){ // 2000 + 1 * (800 * 0.5)
+      kP = 1.4;
+    }
+
+    if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + i * timeStep + (timeStep/2)  )){
+      kP = 0.8;
+      pStep(20, 0);
+    }
+
+    if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + i * timeStep + (timeStep/2) + miniStep)){
+      kP = 1.4;
+    }
+  }
+}
+
+void moveWalkSlow (){
+  int timeStep = 3400;
+  int miniStep = 400;
+
+  for(int i = 0; i < 100; i++){
+      // wait 800
+    if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + i * timeStep)){ // 2000 + 1 * (800 * 0.4)
+      kP = 0.8;
+      pStep(20, 1);
+    }
+    if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + i * timeStep + miniStep)){ // 2000 + 1 * (800 * 0.5)
+      kP = 1.4;
+    }
+
+    if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + i * timeStep + (timeStep/2)  )){
+      kP = 0.8;
+      pStep(20, 0);
+    }
+
+    if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + i * timeStep + (timeStep/2) + miniStep)){
+      kP = 1.4;
+    }
+  }
+}
+
+void moveStand(){
+  kP = 0.8;
+  pStand();
+
+  if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + 200)){
+    kP = 1.2;
+  }
+
+  if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + 450)){
+    kP = 1.6;
+  }
+}
+
+void moveBreathe (){
+  int timeStep = 4000;
+  int miniStep = 400;
+
+  for(int i = 0; i < 100; i++){
+      // wait 800
+    if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + i * timeStep)){ // 2000 + 1 * (800 * 0.4)
+      kP = 0.7;
+      pBow(10);
+    }
+    if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + i * timeStep + miniStep)){ // 2000 + 1 * (800 * 0.5)
+      kP = 1.0;
+    }
+
+    if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + i * timeStep + (timeStep * 0.4)  )){
+      kP = 1.4;
+      pStand();
+    }
+
+    if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + i * timeStep + (timeStep * 0.4) + miniStep)){
+      kP = 1.8;
+    }
+  }
+
+}
+
+void moveBreatheSit (){
+  int timeStep = 4000;
+  int miniStep = 400;
+
+  for(int i = 0; i < 100; i++){
+      // wait 800
+    if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + i * timeStep)){ // 2000 + 1 * (800 * 0.4)
+      kP = 1;
+      pBow(90);
+    }
+    if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + i * timeStep + miniStep)){ // 2000 + 1 * (800 * 0.5)
+      kP = 1.6;
+    }
+
+    if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + i * timeStep + (timeStep * 0.4)  )){
+      kP = 1;
+      pBow(80);
+    }
+
+    if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + i * timeStep + (timeStep * 0.4) + miniStep)){
+      kP = 1.6;
+    }
+  }
+
+}
+
+void moveStepRight (){
+  kP = 0.8;
+  pStepRight(20);
+  
+  if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + 200)){
+    kP = 1.4;
+  }
+}
+
+void moveStepLeft (){
+  kP = 0.8;
+  pStepLeft(20);
+  
+  if (choreoTimePassed(currentChoreo[choreoStepCounter-1].time + 200)){
+    kP = 1.4;
+  }
+}
+
 
 
 // call once to set timer
@@ -362,12 +849,12 @@ void startChoreo(ChoreographyStep choreo[]){
 // run this in the loop
 void playCurrentChoreo(){
   if (choreoTimePassed(currentChoreo[choreoStepCounter].time)){
-    if (choreoStepCounter < sizeof(currentChoreo)-1 ){
+    if (currentChoreo[choreoStepCounter].time != UINT32_MAX){
       choreoStepCounter ++;
     }
     
   }
-  currentChoreo[choreoStepCounter].move();
+  currentChoreo[choreoStepCounter - 1].move();
 }
 
 
@@ -376,7 +863,7 @@ void playCurrentChoreo(){
 
 void setup()
 {
-  currentChoreo = myChoreo; 
+  currentChoreo = standingChoreo; 
 
   pinMode(LED_R, OUTPUT);
   pinMode(LED_G, OUTPUT);
@@ -450,7 +937,7 @@ void loop()
   readADS();
 
   
-  playCurrentChoreo();
+  
 
   // in slider mode, send continuously.
   // if (lcdSlider){
@@ -861,23 +1348,23 @@ void checkButtons(){
   if (remoteMode == moveMode){
 
     if (keyInput == '4'){
-      startMove(relax);
+      startChoreo(standingChoreo);
     }
 
     if (keyInput == '5'){
-      startChoreo(mySecondChoreo);
+      startChoreo(breathingChoreo);
     }
 
     if (keyInput == '6'){
-      startMove(stand);
+      startChoreo(standingChoreo); // replaceme
     }
 
     if (keyInput == '7'){
-      startMove(walk);
+      startChoreo(walkingChoreo);
     }
     
     if (keyInput == '8'){
-      startMove(musicSequence4);
+      startChoreo(testChoreo);
     }
 
     if (keyInput == '9'){
@@ -885,11 +1372,11 @@ void checkButtons(){
     }
 
     if (keyInput == 'B'){
-      startMove(flip);
+      startChoreo(mirrorChoreo);
     }
 
     if (keyInput == 'C'){
-      startMove(sit);
+      startChoreo(nodChoreo);
       // move = musicSequence6;
       // moveTimer = millis() - 51000;
     }
@@ -907,10 +1394,11 @@ void checkButtons(){
     }
 
     if (keyInput == 'D'){
-      startMove(backflip);
+      startChoreo(acroChoreo);
     }
 
     // updateMoves(); // OLD SYSTEM
+    playCurrentChoreo();
     prepareData();
     sendData();
   }
@@ -3230,43 +3718,43 @@ void updateMoves(){
     // splits
 
     if (moveTimePassed(17500)){
-      kP = 1.6;
+      kP = 1.2;
       pStep(80,1);
     } 
     if (moveTimePassed(18400)){
-      kP = 1.6;
+      kP = 1.2;
       pStep(80,0);
     } 
     if (moveTimePassed(19300)){
-      kP = 1.6;
+      kP = 1.2;
       pStep(90,1);
     } 
     if (moveTimePassed(20200)){
-      kP = 1.6;
+      kP = 1.2;
       pStep(90,0);
     } 
 
     // forward backward
 
     if (moveTimePassed(21475)){
-      kP = 1.4;
+      kP = 1.0;
       pBow(80);
     } 
     if (moveTimePassed(22200)){
-      kP = 1.4;
+      kP = 1.0;
       pBow(-80);
     } 
 
     if (moveTimePassed(22600)){
-      kP = 1.4;
+      kP = 1.0;
       pBow(90);
     } 
     if (moveTimePassed(23455)){
-      kP = 1.4;
+      kP = 1.0;
       pBow(-80);
     } 
     if (moveTimePassed(23725)){
-      kP = 1.4;
+      kP = 1.0;
       pBow(90);
     } 
 
@@ -3298,11 +3786,7 @@ uint16_t withinLimits(uint16_t position){
   return min(max(position, forwardLimit),backwardLimit);
 }
 
-void pBow(int16_t upperBodyDegrees){
-  // -90 to 90
-  rTargetPositionDegrees = withinLimits(180 - upperBodyDegrees);
-  lTargetPositionDegrees = withinLimits(180 - upperBodyDegrees);
-}
+
 
 
 
